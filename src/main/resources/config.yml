@@ -1,0 +1,38 @@
+#   _____                 ____  __.__                
+#  /     \ _____  ___  __|    |/ _|__| ____    ____  
+# /  \ /  \\__  \ \  \/  /      < |  |/    \  / ___\ 
+#/    Y    \/ __ \_>    <|    |  \|  |   |  \/ /_/  >
+#\____|__  (____  /__/\_ \____|__ \__|___|  /\___  / 
+#        \/     \/      \/       \/       \//_____/  
+
+#If you have any questions or problems, you can ask on the support server: https://discord.gg/Vr46JHm2kd
+#Remember not to delete any line of code.
+#For problems, bugs, ideas or suggestions you can do it on the discord server.
+general:
+  language: "en"
+  prefix: "&#8A2BE2&lMaxGraves &8» "
+
+grave:
+  #Time in seconds before the tomb disappears (3600 = 1 hour)
+  despawn-time: 3600
+  create-on-death: true
+  #Material used as grave marker (valid: PLAYER_HEAD, CHEST)
+  marker-block: "PLAYER_HEAD"
+  info-menu:
+    item:
+      #Material used for each grave entry in /maxgraves info menu
+      material: "PAPER"
+  hologram:
+    enabled: true
+    #How many ticks between hologram refreshes (20 ticks = 1 second)
+    update-interval-ticks: 20
+    #Vertical offset from the grave marker to the first hologram line
+    base-height: 0.3
+    #Distance between each hologram line
+    line-spacing: 0.25
+    #Available placeholders: {player}, {player_level}, {killer}, {time_left}, {x}, {y}, {z}
+    lines:
+      - "&7{player} &c☠"
+      - "&8• &fLvl: &7{player_level}"
+      - "&8• &cKilled by &f{killer}"
+      - "&e{time_left}"

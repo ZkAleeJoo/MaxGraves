@@ -1,0 +1,43 @@
+#   _____                 ____  __.__                
+#  /     \ _____  ___  __|    |/ _|__| ____    ____  
+# /  \ /  \\__  \ \  \/  /      < |  |/    \  / ___\ 
+#/    Y    \/ __ \_>    <|    |  \|  |   |  \/ /_/  >
+#\____|__  (____  /__/\_ \____|__ \__|___|  /\___  / 
+#        \/     \/      \/       \/       \//_____/  
+
+#If you have any questions or problems, you can ask on the support server: https://discord.gg/Vr46JHm2kd
+#Remember not to delete any line of code.
+#For problems, bugs, ideas or suggestions you can do it on the discord server.
+messages:
+  no-permission: "&cNo tienes permisos para usar este comando."
+  plugin-reload: "&aLa configuración y mensajes se han recargado correctamente."
+  usage-command: "&cUso: /maxgraves <reload|info>"
+  grave-created: "&eHas muerto. Se ha creado una tumba para guardar tus cosas."
+  grave-claimed: "&aHas recuperado todos tus objetos y tu experiencia de tu tumba."
+  map-received: "&eSe ha añadido un mapa a tu inventario para guiarte a tu tumba."
+  only-owner-can-claim: "&cSolo el dueño puede reclamar esta tumba."
+  only-owner-can-use-map: "&cEste mapa no te pertenece."
+  locator-used: "&aHas sido teletransportado a tu tumba."
+  grave-not-found: "&cNo se encontró la tumba vinculada a este mapa."
+  grave-expired: "&cTu tumba expiró y sus objetos se perdieron."
+  grave-create-fail: "&cNo se pudo crear una tumba en el lugar de tu muerte."
+
+  hologram-unknown-killer: "Desconocido"
+  locator-item-name: "&#8A2BE2&lLocalizador de Tumba"
+  locator-item-world: "&7Mundo: &f{world}"
+  locator-item-coordinates: "&7X: &f{x} &7Y: &f{y} &7Z: &f{z}"
+  locator-item-action: "&eClick derecho para teletransportarte"
+  only-players-command: "&cSolo jugadores pueden usar este comando."
+  info-no-grave: "&cNo tienes una tumba activa en este momento."
+  info-header: "&eInformación de tu tumba activa:"
+  info-world: "&7Mundo: &f{world}"
+  info-coordinates: "&7Coordenadas: &fX:{x} Y:{y} Z:{z}"
+  info-time-left: "&7Tiempo restante: &f{time_left}"
+  info-menu-title: "&8Tumbas activas"
+  info-menu-item-name: "&eTumba #{index}"
+  info-menu-item-lore:
+    - "&7Mundo: &f{world}"
+    - "&7Coordenadas: &fX:{x} Y:{y} Z:{z}"
+    - "&7Tiempo restante: &f{time_left}"
+    - "&7ID: &f{id}"
+

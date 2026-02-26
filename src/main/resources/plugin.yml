@@ -1,0 +1,24 @@
+name: MaxGraves
+version: '1.0.0'
+main: org.zkaleejoo.MaxGraves
+api-version: '1.21'
+authors: [ ZkAleeJoo ]
+description: Plugin based on typical Minecraft tombs
+
+commands:
+  maxgraves:
+    description: Main MaxGraves command
+    aliases: [maxgrave, mg, graves]
+    children:
+      maxgrave.tp: true
+      maxgrave.info: true
+permissions:
+  maxgrave.admin:
+    description: Full access to MaxGraves and administrative commands.
+    default: op
+  maxgrave.tp:
+    description: Allows players to teleport to a grave using the locator paper.
+    default: false
+  maxgrave.info:
+    description: Allows players to use /maxgrave info.
+    default: true
