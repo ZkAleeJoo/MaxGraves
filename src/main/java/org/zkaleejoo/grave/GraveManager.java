@@ -366,7 +366,7 @@ public class GraveManager {
     }
 
     private void refreshAllHolograms() {
-        for (UUID graveId : new HashSet<>(hologramEntitiesByGrave.keySet())) { //asdasdasdasd
+        for (UUID graveId : new HashSet<>(hologramEntitiesByGrave.keySet())) { 
             removeHologram(graveId);
         }
 
