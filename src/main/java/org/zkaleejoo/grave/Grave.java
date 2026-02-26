@@ -1,11 +1,14 @@
 package org.zkaleejoo.grave;
 
 import org.bukkit.Location;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class Grave {
@@ -20,8 +23,9 @@ public class Grave {
     private final int ownerLevel;
     private final String killerName;
     private final long despawnAtMillis;
+    private final Map<Location, BlockData> originalBlocks;
 
-    public Grave(UUID id, UUID owner, String ownerName, int ownerLevel, String killerName, Location location, Location secondaryLocation, List<ItemStack> items, int exp, long despawnAtMillis) {
+    public Grave(UUID id, UUID owner, String ownerName, int ownerLevel, String killerName, Location location, Location secondaryLocation, List<ItemStack> items, int exp, long despawnAtMillis, Map<Location, BlockData> originalBlocks) {
         this.id = id;
         this.owner = owner;
         this.ownerName = ownerName;
@@ -32,6 +36,14 @@ public class Grave {
         this.items = new ArrayList<>(items);
         this.exp = exp;
         this.despawnAtMillis = despawnAtMillis;
+        this.originalBlocks = new HashMap<>();
+        if (originalBlocks != null) {
+            originalBlocks.forEach((loc, blockData) -> {
+                if (loc != null && blockData != null) {
+                    this.originalBlocks.put(loc.clone(), blockData.clone());
+                }
+            });
+        }
     }
 
     public UUID getId() {
@@ -72,5 +84,11 @@ public class Grave {
 
     public long getDespawnAtMillis() {
         return despawnAtMillis;
+    }
+
+    public Map<Location, BlockData> getOriginalBlocks() {
+        Map<Location, BlockData> blocks = new HashMap<>();
+        originalBlocks.forEach((loc, data) -> blocks.put(loc.clone(), data.clone()));
+        return Collections.unmodifiableMap(blocks);
     }
 }

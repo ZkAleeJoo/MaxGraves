@@ -20,6 +20,9 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
 import org.zkaleejoo.MaxGraves;
 import org.zkaleejoo.utils.MessageUtils;
+import org.bukkit.Tag;
+import org.bukkit.block.data.BlockData;
+import java.util.concurrent.ThreadLocalRandom;
 
 import java.util.*;
 
@@ -75,6 +78,7 @@ public class GraveManager {
                 .toList();
 
         Location markerLocation = block.getLocation();
+        Map<Location, BlockData> originalBlocks = corruptEnvironment(markerLocation);
 
         UUID graveId = UUID.randomUUID();
         long despawnAtMillis = System.currentTimeMillis() + (Math.max(plugin.getConfigManager().getGraveDespawnTime(), 1) * 1000L);
@@ -88,7 +92,8 @@ public class GraveManager {
                 null,
                 storedItems,
                 Math.max(droppedExp, 0),
-                despawnAtMillis
+                despawnAtMillis,
+                originalBlocks
         );
 
         gravesById.put(graveId, grave);
@@ -246,10 +251,14 @@ public class GraveManager {
     }
 
     private void removeGrave(UUID graveId, boolean dropContents) {
-        Grave grave = gravesById.remove(graveId);
+        Grave grave = gravesById.get(graveId);
         if (grave == null) {
             return;
         }
+
+        restoreEnvironment(grave);
+
+        gravesById.remove(graveId);
 
         Set<UUID> ownerGraves = gravesByPlayer.get(grave.getOwner());
         if (ownerGraves != null) {
@@ -281,6 +290,58 @@ public class GraveManager {
         }
     }
 
+    private Map<Location, BlockData> corruptEnvironment(Location markerLocation) {
+        Map<Location, BlockData> originalBlocks = new HashMap<>();
+
+        for (int x = -1; x <= 1; x++) {
+            for (int z = -1; z <= 1; z++) {
+                Location target = markerLocation.clone().add(x, 0, z);
+                if (isSameBlockLocation(target, markerLocation)) {
+                    continue;
+                }
+
+                Block nearbyBlock = target.getBlock();
+                originalBlocks.put(nearbyBlock.getLocation(), nearbyBlock.getBlockData().clone());
+
+                Material corruptedType = getCorruptedType(nearbyBlock.getType());
+                if (corruptedType != nearbyBlock.getType()) {
+                    nearbyBlock.setType(corruptedType, false);
+                }
+            }
+        }
+
+        return originalBlocks;
+    }
+
+    private void restoreEnvironment(Grave grave) {
+        for (Map.Entry<Location, BlockData> entry : grave.getOriginalBlocks().entrySet()) {
+            Location location = entry.getKey();
+            BlockData originalData = entry.getValue();
+
+            if (location == null || originalData == null || location.getWorld() == null) {
+                continue;
+            }
+
+            location.getBlock().setBlockData(originalData.clone(), false);
+        }
+    }
+
+    private Material getCorruptedType(Material material) {
+        if (material == Material.GRASS_BLOCK) {
+            return Material.PODZOL;
+        }
+
+        if (material == Material.STONE) {
+            return ThreadLocalRandom.current().nextBoolean() ? Material.GRANITE : Material.ANDESITE;
+        }
+
+        if (Tag.FLOWERS.isTagged(material) || Tag.SMALL_FLOWERS.isTagged(material)) {
+            return Material.AIR;
+        }
+
+        return material;
+    }
+
     private void removeLocatorItems(Player player, UUID graveId) {
         for (ItemStack item : player.getInventory().getContents()) {
             Optional<UUID> target = getLocatorTarget(item);
@@ -305,7 +366,7 @@ public class GraveManager {
     }
 
     private void refreshAllHolograms() {
-        for (UUID graveId : new HashSet<>(hologramEntitiesByGrave.keySet())) {
+        for (UUID graveId : new HashSet<>(hologramEntitiesByGrave.keySet())) { //asdasdasdasd
             removeHologram(graveId);
         }
 
