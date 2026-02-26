@@ -9,13 +9,14 @@ commands:
   maxgraves:
     description: Main MaxGraves command
     aliases: [maxgrave, mg, graves]
-    children:
-      maxgrave.tp: true
-      maxgrave.info: true
+    
 permissions:
   maxgrave.admin:
     description: Full access to MaxGraves and administrative commands.
     default: op
+    children:
+      maxgrave.tp: true
+      maxgrave.info: true
   maxgrave.tp:
     description: Allows players to teleport to a grave using the locator paper.
     default: false
