@@ -300,7 +300,7 @@ public class GraveManager {
                     continue;
                 }
 
-                Block nearbyBlock = target.getBlock();
+                Block nearbyBlock = resolveCorruptionTargetBlock(target);
                 originalBlocks.put(nearbyBlock.getLocation(), nearbyBlock.getBlockData().clone());
 
                 Material corruptedType = getCorruptedType(nearbyBlock.getType());
@@ -311,6 +311,20 @@ public class GraveManager {
         }
 
         return originalBlocks;
+    }
+
+    private Block resolveCorruptionTargetBlock(Location location) {
+        Block block = location.getBlock();
+        if (!(block.getType().isAir() || block.isPassable())) {
+            return block;
+        }
+
+        Block below = block.getRelative(0, -1, 0);
+        if (below.getY() >= below.getWorld().getMinHeight()) {
+            return below;
+        }
+
+        return block;
     }
 
     private void restoreEnvironment(Grave grave) {
