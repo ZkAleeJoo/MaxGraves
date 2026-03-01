@@ -23,6 +23,9 @@ import org.zkaleejoo.utils.MessageUtils;
 import org.bukkit.Tag;
 import org.bukkit.block.data.BlockData;
 import java.util.concurrent.ThreadLocalRandom;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
+import org.bukkit.World;
 
 import java.util.*;
 
@@ -35,12 +38,26 @@ public class GraveManager {
     private final Map<UUID, BukkitTask> removalTasks = new HashMap<>();
     private final Map<UUID, List<UUID>> hologramEntitiesByGrave = new HashMap<>();
     private final Map<UUID, BukkitTask> hologramTasks = new HashMap<>();
+    private final Map<UUID, BukkitTask> particleTasks = new HashMap<>();
     private Material graveMarkerMaterial;
     private boolean hologramEnabled;
     private double hologramBaseHeight;
     private double hologramLineSpacing;
     private long hologramUpdateIntervalTicks;
     private List<String> hologramLines;
+    private boolean effectsEnabled;
+    private long effectsUpdateIntervalTicks;
+    private Particle effectsPrimaryParticle;
+    private Particle effectsSecondaryParticle;
+    private int effectsPrimaryCount;
+    private int effectsSecondaryCount;
+    private double effectsSpiralRadius;
+    private double effectsSpiralHeight;
+    private double effectsVerticalSpeed;
+    private boolean effectsAmbientSoundEnabled;
+    private Sound effectsAmbientSound;
+    private float effectsAmbientSoundVolume;
+    private float effectsAmbientSoundPitch;
 
     public GraveManager(MaxGraves plugin) {
         this.plugin = plugin;
@@ -56,8 +73,22 @@ public class GraveManager {
         this.hologramLineSpacing = plugin.getConfigManager().getHologramLineSpacing();
         this.hologramUpdateIntervalTicks = plugin.getConfigManager().getHologramUpdateIntervalTicks();
         this.hologramLines = plugin.getConfigManager().getHologramLines();
+        this.effectsEnabled = plugin.getConfigManager().isEffectsEnabled();
+        this.effectsUpdateIntervalTicks = plugin.getConfigManager().getEffectsUpdateIntervalTicks();
+        this.effectsPrimaryParticle = resolveParticle(plugin.getConfigManager().getEffectsPrimaryParticle(), Particle.SOUL);
+        this.effectsSecondaryParticle = resolveParticle(plugin.getConfigManager().getEffectsSecondaryParticle(), Particle.SMOKE);
+        this.effectsPrimaryCount = plugin.getConfigManager().getEffectsPrimaryCount();
+        this.effectsSecondaryCount = plugin.getConfigManager().getEffectsSecondaryCount();
+        this.effectsSpiralRadius = plugin.getConfigManager().getEffectsSpiralRadius();
+        this.effectsSpiralHeight = plugin.getConfigManager().getEffectsSpiralHeight();
+        this.effectsVerticalSpeed = plugin.getConfigManager().getEffectsVerticalSpeed();
+        this.effectsAmbientSoundEnabled = plugin.getConfigManager().isEffectsAmbientSoundEnabled();
+        this.effectsAmbientSound = resolveSound(plugin.getConfigManager().getEffectsAmbientSound(), Sound.BLOCK_SOUL_SAND_HIT);
+        this.effectsAmbientSoundVolume = plugin.getConfigManager().getEffectsAmbientSoundVolume();
+        this.effectsAmbientSoundPitch = plugin.getConfigManager().getEffectsAmbientSoundPitch();
 
         refreshAllHolograms();
+        refreshAllEffects();
     }
 
     public Optional<Grave> createGrave(Player player, Location deathLocation, List<ItemStack> drops, int droppedExp, String killerName) {
@@ -100,6 +131,7 @@ public class GraveManager {
         gravesByPlayer.computeIfAbsent(player.getUniqueId(), ignored -> new LinkedHashSet<>()).add(graveId);
 
         createOrUpdateHologram(grave);
+        createOrUpdateEffects(grave);
         scheduleAutoRemoval(grave);
 
         return Optional.of(grave);
@@ -274,6 +306,7 @@ public class GraveManager {
         }
 
         removeHologram(graveId);
+        removeEffects(graveId);
 
         Location location = grave.getLocation();
         Block block = location.getBlock();
@@ -389,6 +422,64 @@ public class GraveManager {
         }
     }
 
+    private void refreshAllEffects() {
+        for (UUID graveId : new HashSet<>(particleTasks.keySet())) {
+            removeEffects(graveId);
+        }
+
+        for (Grave grave : gravesById.values()) {
+            createOrUpdateEffects(grave);
+        }
+    }
+
+    private void createOrUpdateEffects(Grave grave) {
+        removeEffects(grave.getId());
+
+        if (!effectsEnabled || grave.getLocation().getWorld() == null) {
+            return;
+        }
+
+        UUID graveId = grave.getId();
+        BukkitTask particleTask = Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
+            private double angle;
+            private double offsetY;
+
+            @Override
+            public void run() {
+                Location markerLocation = grave.getLocation();
+                World world = markerLocation.getWorld();
+                if (world == null) {
+                    return;
+                }
+
+                Location center = markerLocation.getBlock().getLocation().add(0.5D, 0.25D, 0.5D);
+
+                double x = center.getX() + (Math.cos(angle) * effectsSpiralRadius);
+                double z = center.getZ() + (Math.sin(angle) * effectsSpiralRadius);
+                double y = center.getY() + offsetY;
+
+                world.spawnParticle(effectsPrimaryParticle, x, y, z, effectsPrimaryCount, 0.05D, 0.08D, 0.05D, 0.005D);
+                world.spawnParticle(effectsSecondaryParticle, center.getX(), center.getY() + (effectsSpiralHeight * 0.5D), center.getZ(), effectsSecondaryCount, 0.25D, 0.45D, 0.25D, 0.002D);
+
+                if (effectsAmbientSoundEnabled && ThreadLocalRandom.current().nextDouble() <= 0.09D) {
+                    world.playSound(center, effectsAmbientSound, effectsAmbientSoundVolume, effectsAmbientSoundPitch);
+                }
+
+                angle += 0.33D;
+                if (angle >= Math.PI * 2) {
+                    angle -= Math.PI * 2;
+                }
+
+                offsetY += effectsVerticalSpeed;
+                if (offsetY > effectsSpiralHeight) {
+                    offsetY = 0D;
+                }
+            }
+        }, effectsUpdateIntervalTicks, effectsUpdateIntervalTicks);
+
+        particleTasks.put(graveId, particleTask);
+    }
+
     private void createOrUpdateHologram(Grave grave) {
         removeHologram(grave.getId());
 
@@ -467,6 +558,13 @@ public class GraveManager {
             if (entity != null) {
                 entity.remove();
             }
+        }
+    }
+
+    private void removeEffects(UUID graveId) {
+        BukkitTask effectTask = particleTasks.remove(graveId);
+        if (effectTask != null) {
+            effectTask.cancel();
         }
     }
 
@@ -590,6 +688,33 @@ public class GraveManager {
         }
 
         return Material.PLAYER_HEAD;
+    }
+
+
+    private Particle resolveParticle(String configuredParticle, Particle fallback) {
+        if (configuredParticle == null || configuredParticle.isBlank()) {
+            return fallback;
+        }
+
+        try {
+            return Particle.valueOf(configuredParticle.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            plugin.getLogger().warning("Invalid particle for grave.effects: " + configuredParticle + ". Falling back to " + fallback + '.');
+            return fallback;
+        }
+    }
+
+    private Sound resolveSound(String configuredSound, Sound fallback) {
+        if (configuredSound == null || configuredSound.isBlank()) {
+            return fallback;
+        }
+
+        try {
+            return Sound.valueOf(configuredSound.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            plugin.getLogger().warning("Invalid sound for grave.effects.ambient-sound.type: " + configuredSound + ". Falling back to " + fallback + '.');
+            return fallback;
+        }
     }
 
     private boolean isSameBlockLocation(Location first, Location second) {

@@ -36,3 +36,23 @@ grave:
       - "&8• &fLvl: &7{player_level}"
       - "&8• &cKilled by &f{killer}"
       - "&e{time_left}"
+  effects:
+    enabled: true
+    #Particle update speed (5 ticks = 0.25 seconds)
+    update-interval-ticks: 5
+    #Primary particle drawn in the spiral around the grave (examples: SOUL, WITCH, SPELL_WITCH)
+    primary-particle: "SOUL"
+    #Secondary particle used as ambient smoke around the grave (examples: SMOKE, SMOKE_LARGE)
+    secondary-particle: "SMOKE"
+    primary-count: 4
+    secondary-count: 2
+    #Controls spiral shape and movement
+    spiral-radius: 0.7
+    spiral-height: 1.3
+    vertical-speed: 0.05
+    ambient-sound:
+      enabled: true
+      #Any Bukkit Sound enum value can be used
+      type: "BLOCK_SOUL_SAND_HIT"
+      volume: 0.45
+      pitch: 0.7

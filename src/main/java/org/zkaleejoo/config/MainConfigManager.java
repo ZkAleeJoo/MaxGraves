@@ -24,6 +24,20 @@ public class MainConfigManager {
     private double hologramLineSpacing;
     private List<String> hologramLines;
     private String infoMenuItemMaterial;
+    private boolean effectsEnabled;
+    private long effectsUpdateIntervalTicks;
+    private String effectsPrimaryParticle;
+    private String effectsSecondaryParticle;
+    private int effectsPrimaryCount;
+    private int effectsSecondaryCount;
+    private double effectsSpiralRadius;
+    private double effectsSpiralHeight;
+    private double effectsVerticalSpeed;
+    private boolean effectsAmbientSoundEnabled;
+    private String effectsAmbientSound;
+    private float effectsAmbientSoundVolume;
+    private float effectsAmbientSoundPitch;
+
 
     //VARIABLES MENSAJES
     private String msgNoPermission;
@@ -93,6 +107,20 @@ public class MainConfigManager {
         } else {
             infoMenuItemMaterial = infoMenuMaterial.name();
         }
+        effectsEnabled = config.getBoolean("grave.effects.enabled", true);
+        effectsUpdateIntervalTicks = Math.max(config.getLong("grave.effects.update-interval-ticks", 5L), 1L);
+        effectsPrimaryParticle = config.getString("grave.effects.primary-particle", "SOUL");
+        effectsSecondaryParticle = config.getString("grave.effects.secondary-particle", "SMOKE_NORMAL");
+        effectsPrimaryCount = Math.max(config.getInt("grave.effects.primary-count", 4), 0);
+        effectsSecondaryCount = Math.max(config.getInt("grave.effects.secondary-count", 2), 0);
+        effectsSpiralRadius = Math.max(config.getDouble("grave.effects.spiral-radius", 0.7D), 0D);
+        effectsSpiralHeight = Math.max(config.getDouble("grave.effects.spiral-height", 1.3D), 0D);
+        effectsVerticalSpeed = Math.max(config.getDouble("grave.effects.vertical-speed", 0.05D), 0.001D);
+
+        effectsAmbientSoundEnabled = config.getBoolean("grave.effects.ambient-sound.enabled", true);
+        effectsAmbientSound = config.getString("grave.effects.ambient-sound.type", "BLOCK_SOUL_SAND_HIT");
+        effectsAmbientSoundVolume = (float) Math.max(config.getDouble("grave.effects.ambient-sound.volume", 0.45D), 0D);
+        effectsAmbientSoundPitch = (float) Math.max(config.getDouble("grave.effects.ambient-sound.pitch", 0.7D), 0.1D);
 
         //MENSAJES
         msgNoPermission = lang.getString("messages.no-permission", "&cYou do not have permission.");
@@ -170,4 +198,17 @@ public class MainConfigManager {
     public String getMsgInfoMenuTitle() { return msgInfoMenuTitle; }
     public String getMsgInfoMenuItemName() { return msgInfoMenuItemName; }
     public List<String> getMsgInfoMenuLore() { return msgInfoMenuLore; }
+    public boolean isEffectsEnabled() { return effectsEnabled; }
+    public long getEffectsUpdateIntervalTicks() { return effectsUpdateIntervalTicks; }
+    public String getEffectsPrimaryParticle() { return effectsPrimaryParticle; }
+    public String getEffectsSecondaryParticle() { return effectsSecondaryParticle; }
+    public int getEffectsPrimaryCount() { return effectsPrimaryCount; }
+    public int getEffectsSecondaryCount() { return effectsSecondaryCount; }
+    public double getEffectsSpiralRadius() { return effectsSpiralRadius; }
+    public double getEffectsSpiralHeight() { return effectsSpiralHeight; }
+    public double getEffectsVerticalSpeed() { return effectsVerticalSpeed; }
+    public boolean isEffectsAmbientSoundEnabled() { return effectsAmbientSoundEnabled; }
+    public String getEffectsAmbientSound() { return effectsAmbientSound; }
+    public float getEffectsAmbientSoundVolume() { return effectsAmbientSoundVolume; }
+    public float getEffectsAmbientSoundPitch() { return effectsAmbientSoundPitch; }
 }
