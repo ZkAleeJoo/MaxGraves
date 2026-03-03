@@ -26,6 +26,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.World;
+import org.bukkit.entity.ExperienceOrb;
 
 import java.util.*;
 
@@ -58,6 +59,12 @@ public class GraveManager {
     private Sound effectsAmbientSound;
     private float effectsAmbientSoundVolume;
     private float effectsAmbientSoundPitch;
+    private boolean claimAnimationEnabled;
+    private long claimAnimationDelayTicks;
+    private boolean claimAnimationLightningEnabled;
+    private Sound claimAnimationSound;
+    private float claimAnimationSoundVolume;
+    private float claimAnimationSoundPitch;
 
     public GraveManager(MaxGraves plugin) {
         this.plugin = plugin;
@@ -86,6 +93,12 @@ public class GraveManager {
         this.effectsAmbientSound = resolveSound(plugin.getConfigManager().getEffectsAmbientSound(), Sound.BLOCK_SOUL_SAND_HIT);
         this.effectsAmbientSoundVolume = plugin.getConfigManager().getEffectsAmbientSoundVolume();
         this.effectsAmbientSoundPitch = plugin.getConfigManager().getEffectsAmbientSoundPitch();
+        this.claimAnimationEnabled = plugin.getConfigManager().isClaimAnimationEnabled();
+        this.claimAnimationDelayTicks = plugin.getConfigManager().getClaimAnimationDelayTicks();
+        this.claimAnimationLightningEnabled = plugin.getConfigManager().isClaimAnimationLightningEnabled();
+        this.claimAnimationSound = resolveSound(plugin.getConfigManager().getClaimAnimationSound(), Sound.ITEM_TOTEM_USE);
+        this.claimAnimationSoundVolume = plugin.getConfigManager().getClaimAnimationSoundVolume();
+        this.claimAnimationSoundPitch = plugin.getConfigManager().getClaimAnimationSoundPitch();
 
         refreshAllHolograms();
         refreshAllEffects();
@@ -223,13 +236,62 @@ public class GraveManager {
             return false;
         }
 
-        giveItems(player, grave.getItems());
-        player.giveExp(grave.getExp());
+        List<ItemStack> rewards = grave.getItems().stream()
+                .filter(Objects::nonNull)
+                .map(ItemStack::clone)
+                .toList();
+        int rewardExp = Math.max(grave.getExp(), 0);
+        Location claimLocation = grave.getLocation().clone().add(0.5D, 0D, 0.5D);
 
         removeGrave(grave.getId(), true);
         removeLocatorItems(player, grave.getId());
 
+        playClaimAnimation(claimLocation);
+
+        if (claimAnimationDelayTicks <= 0L) {
+            deliverClaimRewards(player, claimLocation, rewards, rewardExp);
+            return true;
+        }
+
+        Bukkit.getScheduler().runTaskLater(plugin, () -> deliverClaimRewards(player, claimLocation, rewards, rewardExp), claimAnimationDelayTicks);
+
         return true;
+    }
+
+    private void playClaimAnimation(Location location) {
+        if (!claimAnimationEnabled || location.getWorld() == null) {
+            return;
+        }
+
+        World world = location.getWorld();
+        world.playSound(location, claimAnimationSound, claimAnimationSoundVolume, claimAnimationSoundPitch);
+
+        if (claimAnimationLightningEnabled) {
+            world.strikeLightningEffect(location);
+        }
+    }
+
+    private void deliverClaimRewards(Player player, Location fallbackLocation, List<ItemStack> items, int exp) {
+        if (player.isOnline()) {
+            giveItems(player, items);
+            player.giveExp(exp);
+            return;
+        }
+
+        World world = fallbackLocation.getWorld();
+        if (world == null) {
+            return;
+        }
+
+        for (ItemStack item : items) {
+            if (item != null && item.getType() != Material.AIR) {
+                world.dropItemNaturally(fallbackLocation, item.clone());
+            }
+        }
+
+        if (exp > 0) {
+            world.spawn(fallbackLocation, ExperienceOrb.class, orb -> orb.setExperience(exp));
+        }
     }
 
     public void removeGraveForPlayer(UUID playerId, boolean removeLocator) {

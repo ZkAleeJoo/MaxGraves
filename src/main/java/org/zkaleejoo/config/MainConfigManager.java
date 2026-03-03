@@ -37,6 +37,12 @@ public class MainConfigManager {
     private String effectsAmbientSound;
     private float effectsAmbientSoundVolume;
     private float effectsAmbientSoundPitch;
+    private boolean claimAnimationEnabled;
+    private long claimAnimationDelayTicks;
+    private boolean claimAnimationLightningEnabled;
+    private String claimAnimationSound;
+    private float claimAnimationSoundVolume;
+    private float claimAnimationSoundPitch;
 
 
     //VARIABLES MENSAJES
@@ -121,6 +127,12 @@ public class MainConfigManager {
         effectsAmbientSound = config.getString("grave.effects.ambient-sound.type", "BLOCK_SOUL_SAND_HIT");
         effectsAmbientSoundVolume = (float) Math.max(config.getDouble("grave.effects.ambient-sound.volume", 0.45D), 0D);
         effectsAmbientSoundPitch = (float) Math.max(config.getDouble("grave.effects.ambient-sound.pitch", 0.7D), 0.1D);
+        claimAnimationEnabled = config.getBoolean("grave.claim-animation.enabled", true);
+        claimAnimationDelayTicks = Math.max(config.getLong("grave.claim-animation.delay-ticks", 20L), 0L);
+        claimAnimationLightningEnabled = config.getBoolean("grave.claim-animation.lightning.enabled", true);
+        claimAnimationSound = config.getString("grave.claim-animation.sound.type", "ITEM_TOTEM_USE");
+        claimAnimationSoundVolume = (float) Math.max(config.getDouble("grave.claim-animation.sound.volume", 1.0D), 0D);
+        claimAnimationSoundPitch = (float) Math.max(config.getDouble("grave.claim-animation.sound.pitch", 0.75D), 0.1D);
 
         //MENSAJES
         msgNoPermission = lang.getString("messages.no-permission", "&cYou do not have permission.");
@@ -211,4 +223,10 @@ public class MainConfigManager {
     public String getEffectsAmbientSound() { return effectsAmbientSound; }
     public float getEffectsAmbientSoundVolume() { return effectsAmbientSoundVolume; }
     public float getEffectsAmbientSoundPitch() { return effectsAmbientSoundPitch; }
+    public boolean isClaimAnimationEnabled() { return claimAnimationEnabled; }
+    public long getClaimAnimationDelayTicks() { return claimAnimationDelayTicks; }
+    public boolean isClaimAnimationLightningEnabled() { return claimAnimationLightningEnabled; }
+    public String getClaimAnimationSound() { return claimAnimationSound; }
+    public float getClaimAnimationSoundVolume() { return claimAnimationSoundVolume; }
+    public float getClaimAnimationSoundPitch() { return claimAnimationSoundPitch; }
 }

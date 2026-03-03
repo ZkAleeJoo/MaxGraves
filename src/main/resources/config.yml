@@ -36,6 +36,18 @@ grave:
       - "&8• &fLvl: &7{player_level}"
       - "&8• &cKilled by &f{killer}"
       - "&e{time_left}"
+  claim-animation:
+    enabled: true
+    #Delay before rewards are given after claiming (20 ticks = 1 second)
+    delay-ticks: 20
+    lightning:
+      #Uses a visual lightning strike effect without damage
+      enabled: true
+    sound:
+      #Sound played when claiming the grave
+      type: "ITEM_TOTEM_USE"
+      volume: 1.0
+      pitch: 0.75
   effects:
     enabled: true
     #Particle update speed (5 ticks = 0.25 seconds)
