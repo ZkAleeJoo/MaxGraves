@@ -12,6 +12,6 @@ MaxGraves is a plugin that allows you to save your items in case you die. It has
 
 - /maxgraves reload - maxgrave.admin
 - /maxgraves info - maxgrave.info - default **true**
-- /maxgraves tp - maxgrave.tp - default **false**
+- Teleport - maxgrave.tp - default **false**
 
 *For more information, visit our Discord: https://discord.gg/Vr46JHm2kd*    
