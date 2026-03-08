@@ -30,7 +30,9 @@ public class MessageUtils {
         if (message == null || message.isEmpty()) return;
         String coloredMessage = getColoredMessage(message);
         for (Player player : org.bukkit.Bukkit.getOnlinePlayers()) {
-            player.sendMessage(coloredMessage);
+            if (player != null) {
+                player.sendMessage(coloredMessage);
+            }
         }
     }
 }
