@@ -18,9 +18,15 @@ import org.bukkit.inventory.ItemStack;
 import org.zkaleejoo.MaxGraves;
 import org.zkaleejoo.grave.Grave;
 import org.zkaleejoo.utils.MessageUtils;
-
 import java.util.Optional;
 import java.util.UUID;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Projectile;
+import org.bukkit.entity.Tameable;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.projectiles.ProjectileSource;
 
 public class GraveListener implements Listener {
 
@@ -39,7 +45,7 @@ public class GraveListener implements Listener {
         }
 
         Player player = (Player) event.getEntity();
-        String killerName = player.getKiller() != null ? player.getKiller().getName() : "Environment";
+        String killerName = resolveKillerName(player);
 
         plugin.getGraveManager().createGrave(player, player.getLocation(), event.getDrops(), event.getDroppedExp(), killerName).ifPresentOrElse(grave -> {
             event.getDrops().clear();
@@ -47,6 +53,65 @@ public class GraveListener implements Listener {
 
             player.sendMessage(MessageUtils.getColoredMessage(plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgGraveCreated()));
         }, () -> player.sendMessage(MessageUtils.getColoredMessage(plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgGraveCreateFail())));
+    }
+
+    private String resolveKillerName(Player player) {
+        Player directPlayerKiller = player.getKiller();
+        if (directPlayerKiller != null) {
+            return directPlayerKiller.getName();
+        }
+
+        EntityDamageEvent lastDamageCause = player.getLastDamageCause();
+        if (!(lastDamageCause instanceof EntityDamageByEntityEvent damageByEntityEvent)) {
+            return "Environment";
+        }
+
+        Entity damager = damageByEntityEvent.getDamager();
+        if (damager instanceof Projectile projectile) {
+            ProjectileSource shooter = projectile.getShooter();
+            if (shooter instanceof Entity shooterEntity) {
+                return getEntityDisplayName(shooterEntity);
+            }
+
+            return "Projectile";
+        }
+
+        return getEntityDisplayName(damager);
+    }
+
+    private String getEntityDisplayName(Entity entity) {
+        if (entity instanceof Player killerPlayer) {
+            return killerPlayer.getName();
+        }
+
+        if (entity instanceof Tameable tameable && tameable.getOwner() instanceof Player owner) {
+            return owner.getName() + "'s " + formatEntityTypeName(entity);
+        }
+
+        if (entity instanceof LivingEntity livingEntity && livingEntity.getCustomName() != null && !livingEntity.getCustomName().isBlank()) {
+            return livingEntity.getCustomName();
+        }
+
+        return formatEntityTypeName(entity);
+    }
+
+    private String formatEntityTypeName(Entity entity) {
+        String[] words = entity.getType().name().toLowerCase().split("_");
+        StringBuilder builder = new StringBuilder();
+
+        for (String word : words) {
+            if (word.isBlank()) {
+                continue;
+            }
+
+            if (!builder.isEmpty()) {
+                builder.append(' ');
+            }
+
+            builder.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
+        }
+
+        return builder.isEmpty() ? "Environment" : builder.toString();
     }
 
     @EventHandler
