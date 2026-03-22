@@ -27,6 +27,12 @@ import org.bukkit.entity.Tameable;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.projectiles.ProjectileSource;
+import org.bukkit.event.block.BlockBurnEvent;
+import org.bukkit.event.block.BlockExplodeEvent;
+import org.bukkit.event.block.BlockPistonExtendEvent;
+import org.bukkit.event.block.BlockPistonRetractEvent;
+import org.bukkit.event.block.BlockFromToEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 
 public class GraveListener implements Listener {
 
@@ -209,6 +215,44 @@ public class GraveListener implements Listener {
         }
     }
 
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onEntityExplode(EntityExplodeEvent event) {
+        event.blockList().removeIf(this::isProtectedGraveBlock);
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onBlockExplode(BlockExplodeEvent event) {
+        event.blockList().removeIf(this::isProtectedGraveBlock);
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onBlockBurn(BlockBurnEvent event) {
+        if (isProtectedGraveBlock(event.getBlock())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onBlockFromTo(BlockFromToEvent event) {
+        if (isProtectedGraveBlock(event.getToBlock())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onPistonExtend(BlockPistonExtendEvent event) {
+        if (event.getBlocks().stream().anyMatch(this::isProtectedGraveBlock)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onPistonRetract(BlockPistonRetractEvent event) {
+        if (event.getBlocks().stream().anyMatch(this::isProtectedGraveBlock)) {
+            event.setCancelled(true);
+        }
+    }
+
 
     @EventHandler
     public void onInfoMenuClick(InventoryClickEvent event) {
@@ -256,4 +300,13 @@ public class GraveListener implements Listener {
 
         return marker == Material.PLAYER_HEAD && block.getType() == Material.PLAYER_WALL_HEAD;
     }
+
+    private boolean isProtectedGraveBlock(Block block) {
+        if (!isGraveMarker(block)) {
+            return false;
+        }
+
+        return plugin.getGraveManager().getGraveByMarkerBlock(block).isPresent();
+    }
+    
 }
