@@ -7,7 +7,7 @@ import org.zkaleejoo.config.MainConfigManager;
 import org.zkaleejoo.grave.GraveManager;
 import org.zkaleejoo.listeners.GraveListener;
 import org.zkaleejoo.utils.MessageUtils;
-
+import org.zkaleejoo.utils.UpdateChecker;
 import net.md_5.bungee.api.ChatColor;
 
 public final class MaxGraves extends JavaPlugin {
@@ -15,6 +15,7 @@ public final class MaxGraves extends JavaPlugin {
     private MainConfigManager mainConfigManager;
     private GraveManager graveManager;
     private String version = getDescription().getVersion();
+    private String latestVersion;
 
     //PLUGIN ENCIENDE
     @Override
@@ -38,6 +39,7 @@ public final class MaxGraves extends JavaPlugin {
 
         Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage("&#8A2BE2&lMaxGraves &8» &fThe plugin has been enabled! Version: " + version));
         
+        checkUpdates();
     }
 
     @Override
@@ -68,4 +70,31 @@ public final class MaxGraves extends JavaPlugin {
     public GraveManager getGraveManager() {
         return graveManager;
     }
+
+    private void checkUpdates() {
+        new UpdateChecker(this).getVersion(version -> {
+            if (this.getDescription().getVersion().equalsIgnoreCase(version)) {
+                getLogger().info("You are using the latest version!");
+            } else {
+                this.latestVersion = version;
+
+                Bukkit.getConsoleSender()
+                        .sendMessage(MessageUtils.getColoredMessage("&#8A2BE2&lMaxGraves &8» &a&lUPDATE AVAILABLE!"));
+                Bukkit.getConsoleSender().sendMessage(MessageUtils
+                        .getColoredMessage("&#8A2BE2&lMaxGraves &8» &7A new version of the plugin has been detected."));
+                Bukkit.getConsoleSender().sendMessage(
+                        MessageUtils.getColoredMessage("&#8A2BE2&lMaxGraves &8» &7Available version: &a" + version));
+                Bukkit.getConsoleSender().sendMessage(
+                        MessageUtils.getColoredMessage("&#8A2BE2&lMaxGraves &8» &eDownload it now at the following link:"));
+                Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage(
+                        "&#8A2BE2&lMaxGraves &8» &a&nhttps://modrinth.com/plugin/maxgraves"));
+            }
+        });
+    }
+
+    public String getLatestVersion() {
+        return latestVersion;
+    }
+
+
 }
