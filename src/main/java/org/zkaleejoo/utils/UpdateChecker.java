@@ -11,7 +11,7 @@ import java.util.function.Consumer;
 
 public class UpdateChecker {
 
-    private static final String GITHUB_VERSION_URL = "https://gist.githubusercontent.com/ZkAleeJoo/33cdd64e6c58a490e77284cf9fb1ceca/raw/MaxGraves-Version.txt";
+    private static final String GITHUB_VERSION_URL = "https://gist.githubusercontent.com/ZkAleeJoo/0ca7af26a27a55b54c47d5f1ba877659/raw/MaxGraves-Version.txt";
     private final MaxGraves plugin;
 
     public UpdateChecker(MaxGraves plugin) {
