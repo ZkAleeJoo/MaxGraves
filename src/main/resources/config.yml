@@ -15,6 +15,8 @@ general:
 grave:
   #Time in seconds before the tomb disappears (3600 = 1 hour)
   despawn-time: 3600
+  #Maximum horizontal radius used to search for a safe grave location when the death spot is obstructed
+  search-max-radius: 6
   create-on-death: true
   #Material used as grave marker (valid: PLAYER_HEAD, CHEST)
   marker-block: "PLAYER_HEAD"
