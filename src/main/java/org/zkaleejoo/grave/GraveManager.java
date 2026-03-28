@@ -72,7 +72,6 @@ public class GraveManager {
         reloadSettings();
     }
 
-
     public void reloadSettings() {
         this.graveMarkerMaterial = resolveMarkerMaterial(plugin.getConfigManager().getGraveMarkerBlock());
         this.hologramEnabled = plugin.getConfigManager().isHologramEnabled();
@@ -82,21 +81,25 @@ public class GraveManager {
         this.hologramLines = plugin.getConfigManager().getHologramLines();
         this.effectsEnabled = plugin.getConfigManager().isEffectsEnabled();
         this.effectsUpdateIntervalTicks = plugin.getConfigManager().getEffectsUpdateIntervalTicks();
-        this.effectsPrimaryParticle = resolveParticle(plugin.getConfigManager().getEffectsPrimaryParticle(), Particle.SOUL);
-        this.effectsSecondaryParticle = resolveParticle(plugin.getConfigManager().getEffectsSecondaryParticle(), Particle.SMOKE);
+        this.effectsPrimaryParticle = resolveParticle(plugin.getConfigManager().getEffectsPrimaryParticle(),
+                Particle.SOUL);
+        this.effectsSecondaryParticle = resolveParticle(plugin.getConfigManager().getEffectsSecondaryParticle(),
+                Particle.SMOKE);
         this.effectsPrimaryCount = plugin.getConfigManager().getEffectsPrimaryCount();
         this.effectsSecondaryCount = plugin.getConfigManager().getEffectsSecondaryCount();
         this.effectsSpiralRadius = plugin.getConfigManager().getEffectsSpiralRadius();
         this.effectsSpiralHeight = plugin.getConfigManager().getEffectsSpiralHeight();
         this.effectsVerticalSpeed = plugin.getConfigManager().getEffectsVerticalSpeed();
         this.effectsAmbientSoundEnabled = plugin.getConfigManager().isEffectsAmbientSoundEnabled();
-        this.effectsAmbientSound = resolveSound(plugin.getConfigManager().getEffectsAmbientSound(), Sound.BLOCK_SOUL_SAND_HIT);
+        this.effectsAmbientSound = resolveSound(plugin.getConfigManager().getEffectsAmbientSound(),
+                Sound.BLOCK_SOUL_SAND_HIT);
         this.effectsAmbientSoundVolume = plugin.getConfigManager().getEffectsAmbientSoundVolume();
         this.effectsAmbientSoundPitch = plugin.getConfigManager().getEffectsAmbientSoundPitch();
         this.claimAnimationEnabled = plugin.getConfigManager().isClaimAnimationEnabled();
         this.claimAnimationDelayTicks = plugin.getConfigManager().getClaimAnimationDelayTicks();
         this.claimAnimationLightningEnabled = plugin.getConfigManager().isClaimAnimationLightningEnabled();
-        this.claimAnimationSound = resolveSound(plugin.getConfigManager().getClaimAnimationSound(), Sound.ITEM_TOTEM_USE);
+        this.claimAnimationSound = resolveSound(plugin.getConfigManager().getClaimAnimationSound(),
+                Sound.ITEM_TOTEM_USE);
         this.claimAnimationSoundVolume = plugin.getConfigManager().getClaimAnimationSoundVolume();
         this.claimAnimationSoundPitch = plugin.getConfigManager().getClaimAnimationSoundPitch();
 
@@ -104,7 +107,8 @@ public class GraveManager {
         refreshAllEffects();
     }
 
-    public Optional<Grave> createGrave(Player player, Location deathLocation, List<ItemStack> drops, int droppedExp, String killerName) {
+    public Optional<Grave> createGrave(Player player, Location deathLocation, List<ItemStack> drops, int droppedExp,
+            String killerName) {
         Location graveLocation = findValidGraveLocation(deathLocation);
         if (graveLocation == null) {
             return Optional.empty();
@@ -125,7 +129,8 @@ public class GraveManager {
         Map<Location, BlockData> originalBlocks = corruptEnvironment(markerLocation);
 
         UUID graveId = UUID.randomUUID();
-        long despawnAtMillis = System.currentTimeMillis() + (Math.max(plugin.getConfigManager().getGraveDespawnTime(), 1) * 1000L);
+        long despawnAtMillis = System.currentTimeMillis()
+                + (Math.max(plugin.getConfigManager().getGraveDespawnTime(), 1) * 1000L);
         Grave grave = new Grave(
                 graveId,
                 player.getUniqueId(),
@@ -137,8 +142,7 @@ public class GraveManager {
                 storedItems,
                 Math.max(droppedExp, 0),
                 despawnAtMillis,
-                originalBlocks
-        );
+                originalBlocks);
 
         gravesById.put(graveId, grave);
         gravesByPlayer.computeIfAbsent(player.getUniqueId(), ignored -> new LinkedHashSet<>()).add(graveId);
@@ -225,8 +229,9 @@ public class GraveManager {
         }
 
         return graveIds.stream()
-                .map(gravesById::get)
+                .map(id -> gravesById.get(id))
                 .filter(Objects::nonNull)
+                .map(grave -> (Grave) grave)
                 .sorted(Comparator.comparingLong(Grave::getDespawnAtMillis))
                 .toList();
     }
@@ -253,7 +258,8 @@ public class GraveManager {
             return true;
         }
 
-        Bukkit.getScheduler().runTaskLater(plugin, () -> deliverClaimRewards(player, claimLocation, rewards, rewardExp), claimAnimationDelayTicks);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> deliverClaimRewards(player, claimLocation, rewards, rewardExp),
+                claimAnimationDelayTicks);
 
         return true;
     }
@@ -372,7 +378,8 @@ public class GraveManager {
 
         Location location = grave.getLocation();
         Block block = location.getBlock();
-        if (block.getType() == graveMarkerMaterial || block.getType() == Material.CHEST || block.getType() == Material.PLAYER_HEAD || block.getType() == Material.PLAYER_WALL_HEAD) {
+        if (block.getType() == graveMarkerMaterial || block.getType() == Material.CHEST
+                || block.getType() == Material.PLAYER_HEAD || block.getType() == Material.PLAYER_WALL_HEAD) {
             block.setType(Material.AIR, false);
         }
 
@@ -466,7 +473,8 @@ public class GraveManager {
             removeGrave(grave.getId(), true);
             Player owner = Bukkit.getPlayer(grave.getOwner());
             if (owner != null && owner.isOnline()) {
-                owner.sendMessage(MessageUtils.getColoredMessage(plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgGraveExpired()));
+                owner.sendMessage(MessageUtils.getColoredMessage(
+                        plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgGraveExpired()));
                 removeLocatorItems(owner, grave.getId());
             }
         }, ticks);
@@ -475,7 +483,7 @@ public class GraveManager {
     }
 
     private void refreshAllHolograms() {
-        for (UUID graveId : new HashSet<>(hologramEntitiesByGrave.keySet())) { 
+        for (UUID graveId : new HashSet<>(hologramEntitiesByGrave.keySet())) {
             removeHologram(graveId);
         }
 
@@ -521,7 +529,9 @@ public class GraveManager {
                 double y = center.getY() + offsetY;
 
                 world.spawnParticle(effectsPrimaryParticle, x, y, z, effectsPrimaryCount, 0.05D, 0.08D, 0.05D, 0.005D);
-                world.spawnParticle(effectsSecondaryParticle, center.getX(), center.getY() + (effectsSpiralHeight * 0.5D), center.getZ(), effectsSecondaryCount, 0.25D, 0.45D, 0.25D, 0.002D);
+                world.spawnParticle(effectsSecondaryParticle, center.getX(),
+                        center.getY() + (effectsSpiralHeight * 0.5D), center.getZ(), effectsSecondaryCount, 0.25D,
+                        0.45D, 0.25D, 0.002D);
 
                 if (effectsAmbientSoundEnabled && ThreadLocalRandom.current().nextDouble() <= 0.09D) {
                     world.playSound(center, effectsAmbientSound, effectsAmbientSoundVolume, effectsAmbientSoundPitch);
@@ -560,8 +570,7 @@ public class GraveManager {
             Location lineLocation = hologramAnchor.clone().add(
                     0.0D,
                     hologramBaseHeight + ((hologramLines.size() - 1 - lineIndex) * hologramLineSpacing),
-                    0.0D
-            );
+                    0.0D);
 
             ArmorStand stand = lineLocation.getWorld().spawn(lineLocation, ArmorStand.class, spawned -> {
                 spawned.setInvisible(true);
@@ -581,7 +590,8 @@ public class GraveManager {
 
         hologramEntitiesByGrave.put(grave.getId(), entityIds);
 
-        BukkitTask task = Bukkit.getScheduler().runTaskTimer(plugin, () -> updateHologramText(grave), hologramUpdateIntervalTicks, hologramUpdateIntervalTicks);
+        BukkitTask task = Bukkit.getScheduler().runTaskTimer(plugin, () -> updateHologramText(grave),
+                hologramUpdateIntervalTicks, hologramUpdateIntervalTicks);
         hologramTasks.put(grave.getId(), task);
     }
 
@@ -635,7 +645,9 @@ public class GraveManager {
             return "";
         }
 
-        String killerName = grave.getKillerName() == null || grave.getKillerName().isBlank() ? plugin.getConfigManager().getMsgHologramUnknownKiller() : grave.getKillerName();
+        String killerName = grave.getKillerName() == null || grave.getKillerName().isBlank()
+                ? plugin.getConfigManager().getMsgHologramUnknownKiller()
+                : grave.getKillerName();
         Location location = grave.getLocation();
         String replaced = hologramLines.get(index)
                 .replace("{player}", grave.getOwnerName())
@@ -681,8 +693,7 @@ public class GraveManager {
         meta.setLore(List.of(
                 MessageUtils.getColoredMessage(worldLine),
                 MessageUtils.getColoredMessage(coordinatesLine),
-                MessageUtils.getColoredMessage(plugin.getConfigManager().getMsgLocatorItemAction())
-        ));
+                MessageUtils.getColoredMessage(plugin.getConfigManager().getMsgLocatorItemAction())));
 
         meta.getPersistentDataContainer().set(keys.graveIdKey(), PersistentDataType.STRING, grave.getId().toString());
         locator.setItemMeta(meta);
@@ -695,8 +706,7 @@ public class GraveManager {
         List<Location> candidates = List.of(
                 deathLocation,
                 deathLocation.clone().add(0, 1, 0),
-                deathLocation.clone().add(0, -1, 0)
-        );
+                deathLocation.clone().add(0, -1, 0));
 
         for (Location candidate : candidates) {
             if (isChestPlaceable(candidate)) {
@@ -752,7 +762,6 @@ public class GraveManager {
         return Material.PLAYER_HEAD;
     }
 
-
     private Particle resolveParticle(String configuredParticle, Particle fallback) {
         if (configuredParticle == null || configuredParticle.isBlank()) {
             return fallback;
@@ -761,7 +770,8 @@ public class GraveManager {
         try {
             return Particle.valueOf(configuredParticle.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException ex) {
-            plugin.getLogger().warning("Invalid particle for grave.effects: " + configuredParticle + ". Falling back to " + fallback + '.');
+            plugin.getLogger().warning("Invalid particle for grave.effects: " + configuredParticle
+                    + ". Falling back to " + fallback + '.');
             return fallback;
         }
     }
@@ -774,7 +784,8 @@ public class GraveManager {
         try {
             return Sound.valueOf(configuredSound.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException ex) {
-            plugin.getLogger().warning("Invalid sound for grave.effects.ambient-sound.type: " + configuredSound + ". Falling back to " + fallback + '.');
+            plugin.getLogger().warning("Invalid sound for grave.effects.ambient-sound.type: " + configuredSound
+                    + ". Falling back to " + fallback + '.');
             return fallback;
         }
     }
