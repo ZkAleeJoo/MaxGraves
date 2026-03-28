@@ -776,6 +776,7 @@ public class GraveManager {
         }
     }
 
+    @SuppressWarnings("deprecation")
     private Sound resolveSound(String configuredSound, Sound fallback) {
         if (configuredSound == null || configuredSound.isBlank()) {
             return fallback;
