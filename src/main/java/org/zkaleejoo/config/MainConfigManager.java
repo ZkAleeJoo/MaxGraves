@@ -12,7 +12,7 @@ public class MainConfigManager {
     private CustomConfig langFile;
     private final MaxGraves plugin;
 
-    //VARIABLES CONFIG
+    // VARIABLES CONFIG
     private String selectedLanguage;
     private String prefix;
     private int graveDespawnTime;
@@ -43,9 +43,9 @@ public class MainConfigManager {
     private String claimAnimationSound;
     private float claimAnimationSoundVolume;
     private float claimAnimationSoundPitch;
+    private int graveSearchMaxRadius;
 
-
-    //VARIABLES MENSAJES
+    // VARIABLES MENSAJES
     private String msgNoPermission;
     private String msgPluginReload;
     private String msgGraveCreated;
@@ -90,9 +90,10 @@ public class MainConfigManager {
         langFile.registerConfig();
         FileConfiguration lang = langFile.getConfig();
 
-        //CONFIG
+        // CONFIG
         prefix = config.getString("general.prefix", "&#8A2BE2&lMaxGraves &8» ");
         graveDespawnTime = config.getInt("grave.despawn-time", 3600);
+        graveSearchMaxRadius = Math.max(config.getInt("grave.search-max-radius", 6), 1);
         createOnDeath = config.getBoolean("grave.create-on-death", true);
         graveMarkerBlock = config.getString("grave.marker-block", "PLAYER_HEAD");
 
@@ -106,9 +107,11 @@ public class MainConfigManager {
                 : List.copyOf(configuredHologramLines);
 
         String configuredInfoMenuMaterial = config.getString("grave.info-menu.item.material", "PAPER");
-        Material infoMenuMaterial = Material.matchMaterial(configuredInfoMenuMaterial == null ? "PAPER" : configuredInfoMenuMaterial);
+        Material infoMenuMaterial = Material
+                .matchMaterial(configuredInfoMenuMaterial == null ? "PAPER" : configuredInfoMenuMaterial);
         if (infoMenuMaterial == null || !infoMenuMaterial.isItem()) {
-            plugin.getLogger().warning("Invalid material for grave.info-menu.item.material: " + configuredInfoMenuMaterial + ". Falling back to PAPER.");
+            plugin.getLogger().warning("Invalid material for grave.info-menu.item.material: "
+                    + configuredInfoMenuMaterial + ". Falling back to PAPER.");
             infoMenuItemMaterial = Material.PAPER.name();
         } else {
             infoMenuItemMaterial = infoMenuMaterial.name();
@@ -134,23 +137,28 @@ public class MainConfigManager {
         claimAnimationSoundVolume = (float) Math.max(config.getDouble("grave.claim-animation.sound.volume", 1.0D), 0D);
         claimAnimationSoundPitch = (float) Math.max(config.getDouble("grave.claim-animation.sound.pitch", 0.75D), 0.1D);
 
-        //MENSAJES
+        // MENSAJES
         msgNoPermission = lang.getString("messages.no-permission", "&cYou do not have permission.");
         msgPluginReload = lang.getString("messages.plugin-reload", "&aConfiguration successfully reloaded.");
-        msgGraveCreated = lang.getString("messages.grave-created", "&eYour tomb has been created. You have been given a map.");
+        msgGraveCreated = lang.getString("messages.grave-created",
+                "&eYour tomb has been created. You have been given a map.");
         msgGraveClaimed = lang.getString("messages.grave-claimed", "&aYou have recovered your items and XP.");
         msgMapReceived = lang.getString("messages.map-received", "&eTomb map received.");
         msgUsageCommand = lang.getString("messages.usage-command", "&cUse: /maxgraves <reload>");
-        msgOnlyOwnerCanClaim = lang.getString("messages.only-owner-can-claim", "&cOnly the owner can claim this grave.");
+        msgOnlyOwnerCanClaim = lang.getString("messages.only-owner-can-claim",
+                "&cOnly the owner can claim this grave.");
         msgOnlyOwnerCanUseMap = lang.getString("messages.only-owner-can-use-map", "&cThis map does not belong to you.");
         msgLocatorUsed = lang.getString("messages.locator-used", "&aTeleported to your grave.");
         msgGraveNotFound = lang.getString("messages.grave-not-found", "&cYour grave could not be found.");
-        msgGraveExpired = lang.getString("messages.grave-expired", "&cYour grave has expired and its contents were lost.");
-        msgGraveCreateFail = lang.getString("messages.grave-create-fail", "&cCould not create a grave at your death location.");
+        msgGraveExpired = lang.getString("messages.grave-expired",
+                "&cYour grave has expired and its contents were lost.");
+        msgGraveCreateFail = lang.getString("messages.grave-create-fail",
+                "&cCould not create a grave at your death location.");
         msgHologramUnknownKiller = lang.getString("messages.hologram-unknown-killer", "Unknown");
         msgLocatorItemName = lang.getString("messages.locator-item-name", "&#8A2BE2&lMaxGrave Locator");
         msgLocatorItemWorld = lang.getString("messages.locator-item-world", "&7World: &f{world}");
-        msgLocatorItemCoordinates = lang.getString("messages.locator-item-coordinates", "&7X: &f{x} &7Y: &f{y} &7Z: &f{z}");
+        msgLocatorItemCoordinates = lang.getString("messages.locator-item-coordinates",
+                "&7X: &f{x} &7Y: &f{y} &7Z: &f{z}");
         msgLocatorItemAction = lang.getString("messages.locator-item-action", "&eRight click to teleport");
         msgOnlyPlayersCommand = lang.getString("messages.only-players-command", "&cOnly players can use this command.");
         msgInfoNoGrave = lang.getString("messages.info-no-grave", "&cYou currently do not have an active grave.");
@@ -162,71 +170,240 @@ public class MainConfigManager {
         msgInfoMenuItemName = lang.getString("messages.info-menu-item-name", "&eGrave #{index}");
         List<String> configuredInfoMenuLore = lang.getStringList("messages.info-menu-item-lore");
         msgInfoMenuLore = configuredInfoMenuLore.isEmpty()
-                ? List.of("&7World: &f{world}", "&7Coordinates: &fX:{x} Y:{y} Z:{z}", "&7Time left: &f{time_left}", "&7ID: &f{id}")
+                ? List.of("&7World: &f{world}", "&7Coordinates: &fX:{x} Y:{y} Z:{z}", "&7Time left: &f{time_left}",
+                        "&7ID: &f{id}")
                 : List.copyOf(configuredInfoMenuLore);
     }
 
     public void reloadConfig() {
         configFile.reloadConfig();
-        if (langFile != null) langFile.reloadConfig();
+        if (langFile != null)
+            langFile.reloadConfig();
         loadConfig();
     }
 
-    //GETTERS
-    public String getPrefix() { return prefix; }
-    public int getGraveDespawnTime() { return graveDespawnTime; }
-    public boolean isCreateOnDeath() { return createOnDeath; }
-    public String getGraveMarkerBlock() { return graveMarkerBlock; }
-    public boolean isHologramEnabled() { return hologramEnabled; }
-    public long getHologramUpdateIntervalTicks() { return hologramUpdateIntervalTicks; }
-    public double getHologramBaseHeight() { return hologramBaseHeight; }
-    public double getHologramLineSpacing() { return hologramLineSpacing; }
-    public List<String> getHologramLines() { return hologramLines; }
-    public String getInfoMenuItemMaterial() { return infoMenuItemMaterial; }
+    // GETTERS
+    public String getPrefix() {
+        return prefix;
+    }
 
-    public String getMsgNoPermission() { return msgNoPermission; }
-    public String getMsgPluginReload() { return msgPluginReload; }
-    public String getMsgGraveCreated() { return msgGraveCreated; }
-    public String getMsgGraveClaimed() { return msgGraveClaimed; }
-    public String getMsgMapReceived() { return msgMapReceived; }
-    public String getMsgUsageCommand() { return msgUsageCommand; }
-    public String getMsgOnlyOwnerCanClaim() { return msgOnlyOwnerCanClaim; }
-    public String getMsgOnlyOwnerCanUseMap() { return msgOnlyOwnerCanUseMap; }
-    public String getMsgLocatorUsed() { return msgLocatorUsed; }
-    public String getMsgGraveNotFound() { return msgGraveNotFound; }
-    public String getMsgGraveExpired() { return msgGraveExpired; }
-    public String getMsgGraveCreateFail() { return msgGraveCreateFail; }
-    public String getMsgHologramUnknownKiller() { return msgHologramUnknownKiller; }
-    public String getMsgLocatorItemName() { return msgLocatorItemName; }
-    public String getMsgLocatorItemWorld() { return msgLocatorItemWorld; }
-    public String getMsgLocatorItemCoordinates() { return msgLocatorItemCoordinates; }
-    public String getMsgLocatorItemAction() { return msgLocatorItemAction; }
-    public String getMsgOnlyPlayersCommand() { return msgOnlyPlayersCommand; }
-    public String getMsgInfoNoGrave() { return msgInfoNoGrave; }
-    public String getMsgInfoHeader() { return msgInfoHeader; }
-    public String getMsgInfoWorld() { return msgInfoWorld; }
-    public String getMsgInfoCoordinates() { return msgInfoCoordinates; }
-    public String getMsgInfoTimeLeft() { return msgInfoTimeLeft; }
-    public String getMsgInfoMenuTitle() { return msgInfoMenuTitle; }
-    public String getMsgInfoMenuItemName() { return msgInfoMenuItemName; }
-    public List<String> getMsgInfoMenuLore() { return msgInfoMenuLore; }
-    public boolean isEffectsEnabled() { return effectsEnabled; }
-    public long getEffectsUpdateIntervalTicks() { return effectsUpdateIntervalTicks; }
-    public String getEffectsPrimaryParticle() { return effectsPrimaryParticle; }
-    public String getEffectsSecondaryParticle() { return effectsSecondaryParticle; }
-    public int getEffectsPrimaryCount() { return effectsPrimaryCount; }
-    public int getEffectsSecondaryCount() { return effectsSecondaryCount; }
-    public double getEffectsSpiralRadius() { return effectsSpiralRadius; }
-    public double getEffectsSpiralHeight() { return effectsSpiralHeight; }
-    public double getEffectsVerticalSpeed() { return effectsVerticalSpeed; }
-    public boolean isEffectsAmbientSoundEnabled() { return effectsAmbientSoundEnabled; }
-    public String getEffectsAmbientSound() { return effectsAmbientSound; }
-    public float getEffectsAmbientSoundVolume() { return effectsAmbientSoundVolume; }
-    public float getEffectsAmbientSoundPitch() { return effectsAmbientSoundPitch; }
-    public boolean isClaimAnimationEnabled() { return claimAnimationEnabled; }
-    public long getClaimAnimationDelayTicks() { return claimAnimationDelayTicks; }
-    public boolean isClaimAnimationLightningEnabled() { return claimAnimationLightningEnabled; }
-    public String getClaimAnimationSound() { return claimAnimationSound; }
-    public float getClaimAnimationSoundVolume() { return claimAnimationSoundVolume; }
-    public float getClaimAnimationSoundPitch() { return claimAnimationSoundPitch; }
+    public int getGraveDespawnTime() {
+        return graveDespawnTime;
+    }
+
+    public boolean isCreateOnDeath() {
+        return createOnDeath;
+    }
+
+    public String getGraveMarkerBlock() {
+        return graveMarkerBlock;
+    }
+
+    public boolean isHologramEnabled() {
+        return hologramEnabled;
+    }
+
+    public long getHologramUpdateIntervalTicks() {
+        return hologramUpdateIntervalTicks;
+    }
+
+    public double getHologramBaseHeight() {
+        return hologramBaseHeight;
+    }
+
+    public double getHologramLineSpacing() {
+        return hologramLineSpacing;
+    }
+
+    public List<String> getHologramLines() {
+        return hologramLines;
+    }
+
+    public String getInfoMenuItemMaterial() {
+        return infoMenuItemMaterial;
+    }
+
+    public String getMsgNoPermission() {
+        return msgNoPermission;
+    }
+
+    public String getMsgPluginReload() {
+        return msgPluginReload;
+    }
+
+    public String getMsgGraveCreated() {
+        return msgGraveCreated;
+    }
+
+    public String getMsgGraveClaimed() {
+        return msgGraveClaimed;
+    }
+
+    public String getMsgMapReceived() {
+        return msgMapReceived;
+    }
+
+    public String getMsgUsageCommand() {
+        return msgUsageCommand;
+    }
+
+    public String getMsgOnlyOwnerCanClaim() {
+        return msgOnlyOwnerCanClaim;
+    }
+
+    public String getMsgOnlyOwnerCanUseMap() {
+        return msgOnlyOwnerCanUseMap;
+    }
+
+    public String getMsgLocatorUsed() {
+        return msgLocatorUsed;
+    }
+
+    public String getMsgGraveNotFound() {
+        return msgGraveNotFound;
+    }
+
+    public String getMsgGraveExpired() {
+        return msgGraveExpired;
+    }
+
+    public String getMsgGraveCreateFail() {
+        return msgGraveCreateFail;
+    }
+
+    public String getMsgHologramUnknownKiller() {
+        return msgHologramUnknownKiller;
+    }
+
+    public String getMsgLocatorItemName() {
+        return msgLocatorItemName;
+    }
+
+    public String getMsgLocatorItemWorld() {
+        return msgLocatorItemWorld;
+    }
+
+    public String getMsgLocatorItemCoordinates() {
+        return msgLocatorItemCoordinates;
+    }
+
+    public String getMsgLocatorItemAction() {
+        return msgLocatorItemAction;
+    }
+
+    public String getMsgOnlyPlayersCommand() {
+        return msgOnlyPlayersCommand;
+    }
+
+    public String getMsgInfoNoGrave() {
+        return msgInfoNoGrave;
+    }
+
+    public String getMsgInfoHeader() {
+        return msgInfoHeader;
+    }
+
+    public String getMsgInfoWorld() {
+        return msgInfoWorld;
+    }
+
+    public String getMsgInfoCoordinates() {
+        return msgInfoCoordinates;
+    }
+
+    public String getMsgInfoTimeLeft() {
+        return msgInfoTimeLeft;
+    }
+
+    public String getMsgInfoMenuTitle() {
+        return msgInfoMenuTitle;
+    }
+
+    public String getMsgInfoMenuItemName() {
+        return msgInfoMenuItemName;
+    }
+
+    public List<String> getMsgInfoMenuLore() {
+        return msgInfoMenuLore;
+    }
+
+    public boolean isEffectsEnabled() {
+        return effectsEnabled;
+    }
+
+    public long getEffectsUpdateIntervalTicks() {
+        return effectsUpdateIntervalTicks;
+    }
+
+    public String getEffectsPrimaryParticle() {
+        return effectsPrimaryParticle;
+    }
+
+    public String getEffectsSecondaryParticle() {
+        return effectsSecondaryParticle;
+    }
+
+    public int getEffectsPrimaryCount() {
+        return effectsPrimaryCount;
+    }
+
+    public int getEffectsSecondaryCount() {
+        return effectsSecondaryCount;
+    }
+
+    public double getEffectsSpiralRadius() {
+        return effectsSpiralRadius;
+    }
+
+    public double getEffectsSpiralHeight() {
+        return effectsSpiralHeight;
+    }
+
+    public double getEffectsVerticalSpeed() {
+        return effectsVerticalSpeed;
+    }
+
+    public boolean isEffectsAmbientSoundEnabled() {
+        return effectsAmbientSoundEnabled;
+    }
+
+    public String getEffectsAmbientSound() {
+        return effectsAmbientSound;
+    }
+
+    public float getEffectsAmbientSoundVolume() {
+        return effectsAmbientSoundVolume;
+    }
+
+    public float getEffectsAmbientSoundPitch() {
+        return effectsAmbientSoundPitch;
+    }
+
+    public boolean isClaimAnimationEnabled() {
+        return claimAnimationEnabled;
+    }
+
+    public long getClaimAnimationDelayTicks() {
+        return claimAnimationDelayTicks;
+    }
+
+    public boolean isClaimAnimationLightningEnabled() {
+        return claimAnimationLightningEnabled;
+    }
+
+    public String getClaimAnimationSound() {
+        return claimAnimationSound;
+    }
+
+    public float getClaimAnimationSoundVolume() {
+        return claimAnimationSoundVolume;
+    }
+
+    public float getClaimAnimationSoundPitch() {
+        return claimAnimationSoundPitch;
+    }
+
+    public int getGraveSearchMaxRadius() {
+        return graveSearchMaxRadius;
+    }
 }
