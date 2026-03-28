@@ -36,11 +36,13 @@ public class GraveManager {
     private final NamespacedKeySet keys;
     private final Map<UUID, Grave> gravesById = new HashMap<>();
     private final Map<UUID, Set<UUID>> gravesByPlayer = new HashMap<>();
+    private final Map<GraveBlockKey, UUID> gravesByBlock = new HashMap<>();
     private final Map<UUID, BukkitTask> removalTasks = new HashMap<>();
     private final Map<UUID, List<UUID>> hologramEntitiesByGrave = new HashMap<>();
     private final Map<UUID, BukkitTask> hologramTasks = new HashMap<>();
     private final Map<UUID, BukkitTask> particleTasks = new HashMap<>();
     private Material graveMarkerMaterial;
+    private int graveSearchMaxRadius;
     private boolean hologramEnabled;
     private double hologramBaseHeight;
     private double hologramLineSpacing;
@@ -74,6 +76,7 @@ public class GraveManager {
 
     public void reloadSettings() {
         this.graveMarkerMaterial = resolveMarkerMaterial(plugin.getConfigManager().getGraveMarkerBlock());
+        this.graveSearchMaxRadius = Math.max(plugin.getConfigManager().getGraveSearchMaxRadius(), 1);
         this.hologramEnabled = plugin.getConfigManager().isHologramEnabled();
         this.hologramBaseHeight = plugin.getConfigManager().getHologramBaseHeight();
         this.hologramLineSpacing = plugin.getConfigManager().getHologramLineSpacing();
@@ -147,6 +150,8 @@ public class GraveManager {
         gravesById.put(graveId, grave);
         gravesByPlayer.computeIfAbsent(player.getUniqueId(), ignored -> new LinkedHashSet<>()).add(graveId);
 
+        indexGraveBlocks(grave);
+
         createOrUpdateHologram(grave);
         createOrUpdateEffects(grave);
         scheduleAutoRemoval(grave);
@@ -155,14 +160,15 @@ public class GraveManager {
     }
 
     public int giveLocatorsForPlayer(Player player) {
+        Set<UUID> existingLocatorTargets = new HashSet<>();
+        for (ItemStack item : player.getInventory().getContents()) {
+            getLocatorTarget(item).ifPresent(existingLocatorTargets::add);
+        }
         int givenLocators = 0;
         for (Grave grave : getGravesByPlayer(player.getUniqueId())) {
-            boolean hasLocator = Arrays.stream(player.getInventory().getContents())
-                    .map(this::getLocatorTarget)
-                    .anyMatch(target -> target.isPresent() && target.get().equals(grave.getId()));
-
-            if (!hasLocator) {
+            if (!existingLocatorTargets.contains(grave.getId())) {
                 giveLocatorMap(player, grave);
+                existingLocatorTargets.add(grave.getId());
                 givenLocators++;
             }
         }
@@ -171,14 +177,12 @@ public class GraveManager {
     }
 
     public Optional<Grave> getGraveByBlock(Location location) {
-        return gravesById.values().stream()
-                .filter(grave -> {
-                    Location loc = grave.getLocation();
-                    Location secondaryLoc = grave.getSecondaryLocation();
+        if (location == null || location.getWorld() == null) {
+            return Optional.empty();
+        }
 
-                    return isSameBlockLocation(loc, location) || isSameBlockLocation(secondaryLoc, location);
-                })
-                .findFirst();
+        UUID graveId = gravesByBlock.get(toBlockKey(location));
+        return graveId != null ? Optional.ofNullable(gravesById.get(graveId)) : Optional.empty();
     }
 
     public Optional<Grave> getGraveByChestBlock(Block block) {
@@ -229,9 +233,8 @@ public class GraveManager {
         }
 
         return graveIds.stream()
-                .map(id -> gravesById.get(id))
+                .map(gravesById::get)
                 .filter(Objects::nonNull)
-                .map(grave -> (Grave) grave)
                 .sorted(Comparator.comparingLong(Grave::getDespawnAtMillis))
                 .toList();
     }
@@ -248,7 +251,7 @@ public class GraveManager {
         int rewardExp = Math.max(grave.getExp(), 0);
         Location claimLocation = grave.getLocation().clone().add(0.5D, 0D, 0.5D);
 
-        removeGrave(grave.getId(), true);
+        removeGrave(grave.getId());
         removeLocatorItems(player, grave.getId());
 
         playClaimAnimation(claimLocation);
@@ -306,8 +309,13 @@ public class GraveManager {
             return;
         }
 
+        Player onlinePlayer = removeLocator ? Bukkit.getPlayer(playerId) : null;
+
         for (UUID graveId : new HashSet<>(graveIds)) {
-            removeGrave(graveId, removeLocator);
+            removeGrave(graveId);
+            if (onlinePlayer != null && onlinePlayer.isOnline()) {
+                removeLocatorItems(onlinePlayer, graveId);
+            }
         }
     }
 
@@ -336,7 +344,7 @@ public class GraveManager {
     }
 
     public void clearAll() {
-        new HashSet<>(gravesById.keySet()).forEach(graveId -> removeGrave(graveId, false));
+        new HashSet<>(gravesById.keySet()).forEach(this::removeGrave);
     }
 
     private void giveItems(Player player, List<ItemStack> items) {
@@ -350,7 +358,7 @@ public class GraveManager {
         }
     }
 
-    private void removeGrave(UUID graveId, boolean dropContents) {
+    private void removeGrave(UUID graveId) {
         Grave grave = gravesById.get(graveId);
         if (grave == null) {
             return;
@@ -358,6 +366,7 @@ public class GraveManager {
 
         restoreEnvironment(grave);
 
+        deindexGraveBlocks(grave);
         gravesById.remove(graveId);
 
         Set<UUID> ownerGraves = gravesByPlayer.get(grave.getOwner());
@@ -459,10 +468,12 @@ public class GraveManager {
     }
 
     private void removeLocatorItems(Player player, UUID graveId) {
-        for (ItemStack item : player.getInventory().getContents()) {
+        ItemStack[] contents = player.getInventory().getContents();
+        for (int slot = 0; slot < contents.length; slot++) {
+            ItemStack item = contents[slot];
             Optional<UUID> target = getLocatorTarget(item);
             if (target.isPresent() && target.get().equals(graveId)) {
-                player.getInventory().remove(item);
+                player.getInventory().setItem(slot, null);
             }
         }
     }
@@ -470,7 +481,7 @@ public class GraveManager {
     private void scheduleAutoRemoval(Grave grave) {
         long ticks = Math.max((grave.getDespawnAtMillis() - System.currentTimeMillis()) / 50L, 1L);
         BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            removeGrave(grave.getId(), true);
+            removeGrave(grave.getId());
             Player owner = Bukkit.getPlayer(grave.getOwner());
             if (owner != null && owner.isOnline()) {
                 owner.sendMessage(MessageUtils.getColoredMessage(
@@ -709,18 +720,23 @@ public class GraveManager {
                 deathLocation.clone().add(0, -1, 0));
 
         for (Location candidate : candidates) {
-            if (isChestPlaceable(candidate)) {
+            if (isValidGravePlacement(candidate)) {
                 return candidate;
             }
         }
 
-        int radius = 2;
-        for (int x = -radius; x <= radius; x++) {
-            for (int y = -1; y <= 1; y++) {
-                for (int z = -radius; z <= radius; z++) {
-                    Location around = deathLocation.clone().add(x, y, z);
-                    if (isChestPlaceable(around)) {
-                        return around;
+        for (int radius = 1; radius <= graveSearchMaxRadius; radius++) {
+            for (int x = -radius; x <= radius; x++) {
+                for (int y = -1; y <= 1; y++) {
+                    for (int z = -radius; z <= radius; z++) {
+                        if (Math.max(Math.abs(x), Math.abs(z)) != radius) {
+                            continue;
+                        }
+
+                        Location around = deathLocation.clone().add(x, y, z);
+                        if (isValidGravePlacement(around)) {
+                            return around;
+                        }
                     }
                 }
             }
@@ -729,9 +745,39 @@ public class GraveManager {
         return null;
     }
 
-    private boolean isChestPlaceable(Location location) {
+    private boolean isValidGravePlacement(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
         Block block = location.getBlock();
-        return block.getType().isAir() || block.isPassable();
+        if (!isMarkerReplaceable(block.getType())) {
+            return false;
+        }
+
+        return !hasVerticalGraveConflict(location);
+    }
+
+    private boolean isMarkerReplaceable(Material material) {
+        return material.isAir()
+                || Tag.FLOWERS.isTagged(material)
+                || Tag.SMALL_FLOWERS.isTagged(material)
+                || material == Material.TALL_GRASS
+                || material == Material.SHORT_GRASS
+                || material == Material.FERN
+                || material == Material.LARGE_FERN
+                || material == Material.DEAD_BUSH
+                || material == Material.SNOW;
+    }
+
+    private boolean hasVerticalGraveConflict(Location location) {
+        for (int offsetY = -1; offsetY <= 1; offsetY++) {
+            Location checkLocation = location.clone().add(0, offsetY, 0);
+            if (getGraveByBlock(checkLocation).isPresent()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private boolean placeMarkerBlock(Player player, Block block) {
@@ -800,6 +846,35 @@ public class GraveManager {
                 && first.getBlockX() == second.getBlockX()
                 && first.getBlockY() == second.getBlockY()
                 && first.getBlockZ() == second.getBlockZ();
+    }
+
+    private void indexGraveBlocks(Grave grave) {
+        gravesByBlock.put(toBlockKey(grave.getLocation()), grave.getId());
+
+        Location secondaryLocation = grave.getSecondaryLocation();
+        if (secondaryLocation != null && secondaryLocation.getWorld() != null) {
+            gravesByBlock.put(toBlockKey(secondaryLocation), grave.getId());
+        }
+    }
+
+    private void deindexGraveBlocks(Grave grave) {
+        gravesByBlock.remove(toBlockKey(grave.getLocation()));
+
+        Location secondaryLocation = grave.getSecondaryLocation();
+        if (secondaryLocation != null && secondaryLocation.getWorld() != null) {
+            gravesByBlock.remove(toBlockKey(secondaryLocation));
+        }
+    }
+
+    private GraveBlockKey toBlockKey(Location location) {
+        return new GraveBlockKey(
+                location.getWorld().getUID(),
+                location.getBlockX(),
+                location.getBlockY(),
+                location.getBlockZ());
+    }
+
+    private record GraveBlockKey(UUID worldId, int x, int y, int z) {
     }
 
     private boolean tryAutoEquip(Player player, ItemStack item) {
