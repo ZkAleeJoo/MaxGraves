@@ -63,6 +63,13 @@ public class GraveListener implements Listener {
                 copyItems(player.getInventory().getContents()),
                 Math.max(event.getDroppedExp(), 0),
                 Math.max(player.getTotalExperience(), 0)));
+        logDeathDebug(
+                "LOWEST_SNAPSHOT",
+                player,
+                event,
+                "snapshotItems=" + deathSnapshots.get(player.getUniqueId()).items().size()
+                        + ", snapshotDroppedExp=" + deathSnapshots.get(player.getUniqueId()).snapshotDroppedExp()
+                        + ", totalExp=" + deathSnapshots.get(player.getUniqueId()).totalExperience());
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -85,12 +92,23 @@ public class GraveListener implements Listener {
             deathSnapshots.put(playerId, snapshot);
         }
 
+        logDeathDebug(
+                "MONITOR_BEFORE",
+                player,
+                event,
+                "snapshotPresent=" + (snapshot != null)
+                        + ", snapshotItems=" + snapshot.items().size()
+                        + ", snapshotDroppedExp=" + snapshot.snapshotDroppedExp()
+                        + ", snapshotTotalExp=" + snapshot.totalExperience());
+
         if (snapshot.processed()) {
+            logDeathDebug("MONITOR_SKIP_PROCESSED", player, event, "alreadyProcessed=true");
             return;
         }
         deathSnapshots.put(playerId, snapshot.markProcessed());
 
         if (plugin.getGraveManager().isWorldBlacklisted(player.getLocation())) {
+            logDeathDebug("MONITOR_ABORT", player, event, "reason=world_blacklisted");
             player.sendMessage(MessageUtils.getColoredMessage(
                     plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgWorldBlacklisted()));
             deathSnapshots.remove(playerId);
@@ -98,6 +116,7 @@ public class GraveListener implements Listener {
         }
 
         if (event.getKeepInventory()) {
+            logDeathDebug("MONITOR_ABORT", player, event, "reason=keep_inventory_true");
             deathSnapshots.remove(playerId);
             return;
         }
@@ -112,13 +131,41 @@ public class GraveListener implements Listener {
         plugin.getGraveManager()
                 .createGrave(player, player.getLocation(), graveItems, graveExp, killerName)
                 .ifPresentOrElse(grave -> {
+                    int dropsBeforeClear = event.getDrops().size();
+                    int expBeforeClear = event.getDroppedExp();
                     event.getDrops().clear();
                     event.setDroppedExp(0);
 
+                    logDeathDebug(
+                            "MONITOR_GRAVE_CREATED",
+                            player,
+                            event,
+                            "graveId=" + grave.getId()
+                                    + ", sourceItems=" + graveItems.size()
+                                    + ", sourceExp=" + graveExp
+                                    + ", dropsBeforeClear=" + dropsBeforeClear
+                                    + ", expBeforeClear=" + expBeforeClear
+                                    + ", dropsAfterClear=" + event.getDrops().size()
+                                    + ", expAfterClear=" + event.getDroppedExp());
+
                     player.sendMessage(MessageUtils.getColoredMessage(
                             plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgGraveCreated()));
-                }, () -> player.sendMessage(MessageUtils.getColoredMessage(
-                        plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgGraveCreateFail())));
+                }, () -> {
+                    logDeathDebug(
+                            "MONITOR_GRAVE_CREATE_FAIL",
+                            player,
+                            event,
+                            "sourceItems=" + graveItems.size()
+                                    + ", sourceExp=" + graveExp
+                                    + ", reason=grave_manager_returned_empty");
+                    player.sendMessage(MessageUtils.getColoredMessage(
+                            plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgGraveCreateFail()));
+                });
+        logDeathDebug(
+                "MONITOR_AFTER",
+                player,
+                event,
+                "finalDrops=" + event.getDrops().size() + ", finalDroppedExp=" + event.getDroppedExp());
         deathSnapshots.remove(playerId);
     }
 
@@ -159,6 +206,28 @@ public class GraveListener implements Listener {
         }
 
         return copiedItems;
+    }
+
+    private void logDeathDebug(String phase, Player player, PlayerDeathEvent event, String details) {
+        if (!plugin.getConfigManager().isDebugDeathEvents()) {
+            return;
+        }
+
+        String damageCause = "NONE";
+        if (player.getLastDamageCause() != null && player.getLastDamageCause().getCause() != null) {
+            damageCause = player.getLastDamageCause().getCause().name();
+        }
+
+        plugin.getLogger().info("[DeathDebug] phase=" + phase
+                + ", player=" + player.getName()
+                + ", uuid=" + player.getUniqueId()
+                + ", world=" + player.getWorld().getName()
+                + ", keepInventory=" + event.getKeepInventory()
+                + ", keepLevel=" + event.getKeepLevel()
+                + ", eventDrops=" + event.getDrops().size()
+                + ", eventDroppedExp=" + event.getDroppedExp()
+                + ", damageCause=" + damageCause
+                + ", details={" + details + "}");
     }
 
     private String resolveKillerName(Player player) {

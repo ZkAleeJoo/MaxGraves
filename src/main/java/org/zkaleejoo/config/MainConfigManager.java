@@ -48,6 +48,7 @@ public class MainConfigManager {
     private float claimAnimationSoundPitch;
     private int graveSearchMaxRadius;
     private Set<String> graveBlacklistedWorlds;
+    private boolean debugDeathEvents;
 
     // VARIABLES MENSAJES
     private String msgNoPermission;
@@ -99,6 +100,7 @@ public class MainConfigManager {
         prefix = config.getString("general.prefix", "&#8A2BE2&lMaxGraves &8» ");
         graveDespawnTime = config.getInt("grave.despawn-time", 3600);
         graveSearchMaxRadius = Math.max(config.getInt("grave.search-max-radius", 6), 1);
+        debugDeathEvents = config.getBoolean("grave.debug-death-events", false);
         createOnDeath = config.getBoolean("grave.create-on-death", true);
         graveMarkerBlock = config.getString("grave.marker-block", "PLAYER_HEAD");
         graveBlacklistedWorlds = config.getStringList("grave.blacklisted-worlds").stream()
@@ -424,5 +426,9 @@ public class MainConfigManager {
 
     public String getMsgWorldBlacklisted() {
         return msgWorldBlacklisted;
+    }
+
+    public boolean isDebugDeathEvents() {
+        return debugDeathEvents;
     }
 }

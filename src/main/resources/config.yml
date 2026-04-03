@@ -22,6 +22,8 @@ grave:
     - "evento_pvp"
   #Maximum horizontal radius used to search for a safe grave location when the death spot is obstructed
   search-max-radius: 6
+  #Enables detailed console traces for PlayerDeathEvent processing and final drops/exp state
+  debug-death-events: false
   create-on-death: true
   #Material used as grave marker (valid: PLAYER_HEAD, CHEST)
   marker-block: "PLAYER_HEAD"
