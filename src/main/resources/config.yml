@@ -16,7 +16,10 @@ grave:
   #Time in seconds before the tomb disappears (3600 = 1 hour)
   despawn-time: 3600
   #World names where graves should never be created
-  blacklisted-worlds: []
+  blacklisted-worlds:
+    - "pvp_nether"
+    - "pvp_the_end"
+    - "evento_pvp"
   #Maximum horizontal radius used to search for a safe grave location when the death spot is obstructed
   search-max-radius: 6
   create-on-death: true
