@@ -21,6 +21,7 @@ messages:
   grave-not-found: "&cNo se encontró la tumba vinculada a este mapa."
   grave-expired: "&cTu tumba expiró y sus objetos se perdieron."
   grave-create-fail: "&cNo se pudo crear una tumba en el lugar de tu muerte."
+  world-blacklisted: "&cLas tumbas están desactivadas en este mundo."
 
   hologram-unknown-killer: "Desconocido"
   locator-item-name: "&#8A2BE2&lLocalizador de Tumba"

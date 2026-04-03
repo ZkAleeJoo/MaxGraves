@@ -6,6 +6,7 @@ import org.zkaleejoo.MaxGraves;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.util.function.Consumer;
 
@@ -21,7 +22,7 @@ public class UpdateChecker {
     public void getVersion(final Consumer<String> consumer) {
         Bukkit.getScheduler().runTaskAsynchronously(this.plugin, () -> {
             try {
-                URL url = new URL(GITHUB_VERSION_URL);
+                URL url = URI.create(GITHUB_VERSION_URL).toURL();
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 
                 connection.setRequestMethod("GET");

@@ -67,6 +67,7 @@ public class GraveManager {
     private Sound claimAnimationSound;
     private float claimAnimationSoundVolume;
     private float claimAnimationSoundPitch;
+    private Set<String> blacklistedWorlds;
 
     public GraveManager(MaxGraves plugin) {
         this.plugin = plugin;
@@ -77,6 +78,7 @@ public class GraveManager {
     public void reloadSettings() {
         this.graveMarkerMaterial = resolveMarkerMaterial(plugin.getConfigManager().getGraveMarkerBlock());
         this.graveSearchMaxRadius = Math.max(plugin.getConfigManager().getGraveSearchMaxRadius(), 1);
+        this.blacklistedWorlds = plugin.getConfigManager().getGraveBlacklistedWorlds();
         this.hologramEnabled = plugin.getConfigManager().isHologramEnabled();
         this.hologramBaseHeight = plugin.getConfigManager().getHologramBaseHeight();
         this.hologramLineSpacing = plugin.getConfigManager().getHologramLineSpacing();
@@ -112,6 +114,9 @@ public class GraveManager {
 
     public Optional<Grave> createGrave(Player player, Location deathLocation, List<ItemStack> drops, int droppedExp,
             String killerName) {
+        if (isWorldBlacklisted(deathLocation)) {
+            return Optional.empty();
+        }
         Location graveLocation = findValidGraveLocation(deathLocation);
         if (graveLocation == null) {
             return Optional.empty();
@@ -793,6 +798,14 @@ public class GraveManager {
 
     public Material getGraveMarkerMaterial() {
         return graveMarkerMaterial;
+    }
+
+    public boolean isWorldBlacklisted(Location location) {
+        if (location == null || location.getWorld() == null || blacklistedWorlds.isEmpty()) {
+            return false;
+        }
+
+        return blacklistedWorlds.contains(location.getWorld().getName().toLowerCase(Locale.ROOT));
     }
 
     private Material resolveMarkerMaterial(String configuredMaterial) {

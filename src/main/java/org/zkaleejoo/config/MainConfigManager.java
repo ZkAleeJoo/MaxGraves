@@ -5,6 +5,9 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.zkaleejoo.MaxGraves;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class MainConfigManager {
 
@@ -44,6 +47,7 @@ public class MainConfigManager {
     private float claimAnimationSoundVolume;
     private float claimAnimationSoundPitch;
     private int graveSearchMaxRadius;
+    private Set<String> graveBlacklistedWorlds;
 
     // VARIABLES MENSAJES
     private String msgNoPermission;
@@ -72,6 +76,7 @@ public class MainConfigManager {
     private String msgInfoMenuTitle;
     private String msgInfoMenuItemName;
     private List<String> msgInfoMenuLore;
+    private String msgWorldBlacklisted;
 
     public MainConfigManager(MaxGraves plugin) {
         this.plugin = plugin;
@@ -96,6 +101,10 @@ public class MainConfigManager {
         graveSearchMaxRadius = Math.max(config.getInt("grave.search-max-radius", 6), 1);
         createOnDeath = config.getBoolean("grave.create-on-death", true);
         graveMarkerBlock = config.getString("grave.marker-block", "PLAYER_HEAD");
+        graveBlacklistedWorlds = config.getStringList("grave.blacklisted-worlds").stream()
+                .filter(worldName -> worldName != null && !worldName.isBlank())
+                .map(worldName -> worldName.trim().toLowerCase(Locale.ROOT))
+                .collect(Collectors.toUnmodifiableSet());
 
         hologramEnabled = config.getBoolean("grave.hologram.enabled", true);
         hologramUpdateIntervalTicks = Math.max(config.getLong("grave.hologram.update-interval-ticks", 20L), 1L);
@@ -173,6 +182,8 @@ public class MainConfigManager {
                 ? List.of("&7World: &f{world}", "&7Coordinates: &fX:{x} Y:{y} Z:{z}", "&7Time left: &f{time_left}",
                         "&7ID: &f{id}")
                 : List.copyOf(configuredInfoMenuLore);
+        msgWorldBlacklisted = lang.getString("messages.world-blacklisted",
+                "&cGraves are disabled in this world.");
     }
 
     public void reloadConfig() {
@@ -405,5 +416,13 @@ public class MainConfigManager {
 
     public int getGraveSearchMaxRadius() {
         return graveSearchMaxRadius;
+    }
+
+    public Set<String> getGraveBlacklistedWorlds() {
+        return graveBlacklistedWorlds;
+    }
+
+    public String getMsgWorldBlacklisted() {
+        return msgWorldBlacklisted;
     }
 }

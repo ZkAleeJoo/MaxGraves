@@ -21,6 +21,7 @@ messages:
   grave-not-found: "&cThe grave linked to this map could not be found."
   grave-expired: "&cYour grave expired and its contents were lost."
   grave-create-fail: "&cCould not create a grave at your death location."
+  world-blacklisted: "&cGraves are disabled in this world."
 
   hologram-unknown-killer: "Unknown"
   locator-item-name: "&#8A2BE2&lMaxGrave Locator"
