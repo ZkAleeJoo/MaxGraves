@@ -34,35 +34,83 @@ import org.bukkit.event.block.BlockPistonExtendEvent;
 import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.block.BlockFromToEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class GraveListener implements Listener {
 
     private static final String TELEPORT_PERMISSION = "maxgrave.tp";
 
     private final MaxGraves plugin;
+    private final Map<UUID, DeathSnapshot> deathSnapshots = new HashMap<>();
 
     public GraveListener(MaxGraves plugin) {
         this.plugin = plugin;
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
-    public void onPlayerDeath(PlayerDeathEvent event) {
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onPlayerDeathSnapshot(PlayerDeathEvent event) {
         if (!plugin.getConfigManager().isCreateOnDeath()) {
             return;
         }
 
         Player player = (Player) event.getEntity();
+        long worldTick = player.getWorld().getFullTime();
+        deathSnapshots.put(player.getUniqueId(), new DeathSnapshot(
+                worldTick,
+                copyItems(player.getInventory().getContents()),
+                Math.max(event.getDroppedExp(), 0),
+                Math.max(player.getTotalExperience(), 0)));
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerDeathFinalize(PlayerDeathEvent event) {
+        if (!plugin.getConfigManager().isCreateOnDeath()) {
+            return;
+        }
+
+        Player player = (Player) event.getEntity();
+        UUID playerId = player.getUniqueId();
+        long worldTick = player.getWorld().getFullTime();
+
+        DeathSnapshot snapshot = deathSnapshots.get(playerId);
+        if (snapshot == null || snapshot.deathTick() != worldTick) {
+            snapshot = new DeathSnapshot(
+                    worldTick,
+                    copyItems(player.getInventory().getContents()),
+                    Math.max(event.getDroppedExp(), 0),
+                    Math.max(player.getTotalExperience(), 0));
+            deathSnapshots.put(playerId, snapshot);
+        }
+
+        if (snapshot.processed()) {
+            return;
+        }
+        deathSnapshots.put(playerId, snapshot.markProcessed());
 
         if (plugin.getGraveManager().isWorldBlacklisted(player.getLocation())) {
             player.sendMessage(MessageUtils.getColoredMessage(
                     plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgWorldBlacklisted()));
+            deathSnapshots.remove(playerId);
             return;
         }
+
+        if (event.getKeepInventory()) {
+            deathSnapshots.remove(playerId);
+            return;
+        }
+
+        List<ItemStack> graveItems = !snapshot.items().isEmpty()
+                ? copyItems(snapshot.items())
+                : copyItems(event.getDrops());
+        int graveExp = event.getKeepLevel() ? 0 : resolveGraveExp(event, snapshot);
 
         String killerName = resolveKillerName(player);
 
         plugin.getGraveManager()
-                .createGrave(player, player.getLocation(), event.getDrops(), event.getDroppedExp(), killerName)
+                .createGrave(player, player.getLocation(), graveItems, graveExp, killerName)
                 .ifPresentOrElse(grave -> {
                     event.getDrops().clear();
                     event.setDroppedExp(0);
@@ -71,6 +119,46 @@ public class GraveListener implements Listener {
                             plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgGraveCreated()));
                 }, () -> player.sendMessage(MessageUtils.getColoredMessage(
                         plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgGraveCreateFail())));
+        deathSnapshots.remove(playerId);
+    }
+
+    private int resolveGraveExp(PlayerDeathEvent event, DeathSnapshot snapshot) {
+        int eventExp = Math.max(event.getDroppedExp(), 0);
+        if (eventExp > 0) {
+            return eventExp;
+        }
+
+        if (snapshot.snapshotDroppedExp() > 0) {
+            return snapshot.snapshotDroppedExp();
+        }
+
+        return Math.max(snapshot.totalExperience(), 0);
+    }
+
+    private List<ItemStack> copyItems(ItemStack[] items) {
+        List<ItemStack> copiedItems = new ArrayList<>();
+        for (ItemStack item : items) {
+            if (item == null || item.getType() == Material.AIR) {
+                continue;
+            }
+
+            copiedItems.add(item.clone());
+        }
+
+        return copiedItems;
+    }
+
+    private List<ItemStack> copyItems(List<ItemStack> items) {
+        List<ItemStack> copiedItems = new ArrayList<>();
+        for (ItemStack item : items) {
+            if (item == null || item.getType() == Material.AIR) {
+                continue;
+            }
+
+            copiedItems.add(item.clone());
+        }
+
+        return copiedItems;
     }
 
     private String resolveKillerName(Player player) {
@@ -135,6 +223,7 @@ public class GraveListener implements Listener {
 
     @EventHandler
     public void onPlayerRespawn(PlayerRespawnEvent event) {
+        deathSnapshots.remove(event.getPlayer().getUniqueId());
         Player player = event.getPlayer();
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             int locatorsGiven = plugin.getGraveManager().giveLocatorsForPlayer(player);
@@ -143,6 +232,17 @@ public class GraveListener implements Listener {
                         plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgMapReceived()));
             }
         });
+    }
+
+    private record DeathSnapshot(long deathTick, List<ItemStack> items, int snapshotDroppedExp, int totalExperience,
+            boolean processed) {
+        private DeathSnapshot(long deathTick, List<ItemStack> items, int snapshotDroppedExp, int totalExperience) {
+            this(deathTick, items, snapshotDroppedExp, totalExperience, false);
+        }
+
+        private DeathSnapshot markProcessed() {
+            return new DeathSnapshot(deathTick, items, snapshotDroppedExp, totalExperience, true);
+        }
     }
 
     @EventHandler
