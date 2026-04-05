@@ -20,7 +20,6 @@ public class MainConfigManager {
     private String prefix;
     private int graveDespawnTime;
     private boolean createOnDeath;
-    private String graveMarkerBlock;
     private boolean hologramEnabled;
     private long hologramUpdateIntervalTicks;
     private double hologramBaseHeight;
@@ -102,7 +101,6 @@ public class MainConfigManager {
         graveSearchMaxRadius = Math.max(config.getInt("grave.search-max-radius", 6), 1);
         debugDeathEvents = config.getBoolean("grave.debug-death-events", false);
         createOnDeath = config.getBoolean("grave.create-on-death", true);
-        graveMarkerBlock = config.getString("grave.marker-block", "PLAYER_HEAD");
         graveBlacklistedWorlds = config.getStringList("grave.blacklisted-worlds").stream()
                 .filter(worldName -> worldName != null && !worldName.isBlank())
                 .map(worldName -> worldName.trim().toLowerCase(Locale.ROOT))
@@ -206,10 +204,6 @@ public class MainConfigManager {
 
     public boolean isCreateOnDeath() {
         return createOnDeath;
-    }
-
-    public String getGraveMarkerBlock() {
-        return graveMarkerBlock;
     }
 
     public boolean isHologramEnabled() {

@@ -25,8 +25,6 @@ grave:
   #Enables detailed console traces for PlayerDeathEvent processing and final drops/exp state
   debug-death-events: false
   create-on-death: true
-  #Material used as grave marker (valid: PLAYER_HEAD, CHEST)
-  marker-block: "PLAYER_HEAD"
   info-menu:
     item:
       #Material used for each grave entry in /maxgraves info menu

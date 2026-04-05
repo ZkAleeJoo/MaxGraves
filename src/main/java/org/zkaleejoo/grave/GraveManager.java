@@ -4,16 +4,16 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.block.Chest;
 import org.bukkit.block.DoubleChest;
 import org.bukkit.block.Skull;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
@@ -21,7 +21,6 @@ import org.bukkit.scheduler.BukkitTask;
 import org.zkaleejoo.MaxGraves;
 import org.zkaleejoo.utils.MessageUtils;
 import org.bukkit.Tag;
-import org.bukkit.block.data.BlockData;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
@@ -81,7 +80,7 @@ public class GraveManager {
     }
 
     public void reloadSettings() {
-        this.graveMarkerMaterial = resolveMarkerMaterial(plugin.getConfigManager().getGraveMarkerBlock());
+        this.graveMarkerMaterial = Material.PLAYER_HEAD;
         this.graveSearchMaxRadius = Math.max(plugin.getConfigManager().getGraveSearchMaxRadius(), 1);
         this.blacklistedWorlds = plugin.getConfigManager().getGraveBlacklistedWorlds();
         this.hologramEnabled = plugin.getConfigManager().isHologramEnabled();
@@ -143,7 +142,6 @@ public class GraveManager {
                 .toList();
 
         Location markerLocation = block.getLocation();
-        Map<Location, BlockData> originalBlocks = corruptEnvironment(markerLocation);
 
         UUID graveId = UUID.randomUUID();
         long despawnAtMillis = System.currentTimeMillis()
@@ -155,11 +153,9 @@ public class GraveManager {
                 player.getLevel(),
                 killerName,
                 markerLocation,
-                null,
                 storedItems,
                 Math.max(droppedExp, 0),
-                despawnAtMillis,
-                originalBlocks);
+                despawnAtMillis);
 
         gravesById.put(graveId, grave);
         gravesByPlayer.computeIfAbsent(player.getUniqueId(), ignored -> new LinkedHashSet<>()).add(graveId);
@@ -199,41 +195,8 @@ public class GraveManager {
         return graveId != null ? Optional.ofNullable(gravesById.get(graveId)) : Optional.empty();
     }
 
-    public Optional<Grave> getGraveByChestBlock(Block block) {
-        return getGraveByMarkerBlock(block);
-    }
-
     public Optional<Grave> getGraveByMarkerBlock(Block block) {
-        Optional<Grave> directMatch = getGraveByBlock(block.getLocation());
-        if (directMatch.isPresent()) {
-            return directMatch;
-        }
-
-        if (block.getType() != Material.CHEST) {
-            return Optional.empty();
-        }
-
-        if (!(block.getState() instanceof Chest chest)) {
-            return Optional.empty();
-        }
-
-        InventoryHolder holder = chest.getInventory().getHolder();
-        if (!(holder instanceof DoubleChest doubleChest)) {
-            return Optional.empty();
-        }
-
-        if (doubleChest.getLeftSide() instanceof Chest leftChest) {
-            Optional<Grave> leftMatch = getGraveByBlock(leftChest.getLocation());
-            if (leftMatch.isPresent()) {
-                return leftMatch;
-            }
-        }
-
-        if (doubleChest.getRightSide() instanceof Chest rightChest) {
-            return getGraveByBlock(rightChest.getLocation());
-        }
-
-        return Optional.empty();
+        return getGraveByBlock(block.getLocation());
     }
 
     public Optional<Grave> getGraveByPlayer(UUID playerId) {
@@ -378,8 +341,6 @@ public class GraveManager {
             return;
         }
 
-        restoreEnvironment(grave);
-
         deindexGraveBlocks(grave);
         gravesById.remove(graveId);
 
@@ -401,84 +362,9 @@ public class GraveManager {
 
         Location location = grave.getLocation();
         Block block = location.getBlock();
-        if (block.getType() == graveMarkerMaterial || block.getType() == Material.CHEST
-                || block.getType() == Material.PLAYER_HEAD || block.getType() == Material.PLAYER_WALL_HEAD) {
+        if (block.getType() == graveMarkerMaterial || block.getType() == Material.PLAYER_WALL_HEAD) {
             block.setType(Material.AIR, false);
         }
-
-        Location secondaryLocation = grave.getSecondaryLocation();
-        if (secondaryLocation != null) {
-            Block secondaryBlock = secondaryLocation.getBlock();
-            if (secondaryBlock.getType() == Material.CHEST) {
-                secondaryBlock.setType(Material.AIR, false);
-            }
-        }
-    }
-
-    private Map<Location, BlockData> corruptEnvironment(Location markerLocation) {
-        Map<Location, BlockData> originalBlocks = new HashMap<>();
-
-        for (int x = -1; x <= 1; x++) {
-            for (int z = -1; z <= 1; z++) {
-                Location target = markerLocation.clone().add(x, 0, z);
-                if (isSameBlockLocation(target, markerLocation)) {
-                    continue;
-                }
-
-                Block nearbyBlock = resolveCorruptionTargetBlock(target);
-                originalBlocks.put(nearbyBlock.getLocation(), nearbyBlock.getBlockData().clone());
-
-                Material corruptedType = getCorruptedType(nearbyBlock.getType());
-                if (corruptedType != nearbyBlock.getType()) {
-                    nearbyBlock.setType(corruptedType, false);
-                }
-            }
-        }
-
-        return originalBlocks;
-    }
-
-    private Block resolveCorruptionTargetBlock(Location location) {
-        Block block = location.getBlock();
-        if (!(block.getType().isAir() || block.isPassable())) {
-            return block;
-        }
-
-        Block below = block.getRelative(0, -1, 0);
-        if (below.getY() >= below.getWorld().getMinHeight()) {
-            return below;
-        }
-
-        return block;
-    }
-
-    private void restoreEnvironment(Grave grave) {
-        for (Map.Entry<Location, BlockData> entry : grave.getOriginalBlocks().entrySet()) {
-            Location location = entry.getKey();
-            BlockData originalData = entry.getValue();
-
-            if (location == null || originalData == null || location.getWorld() == null) {
-                continue;
-            }
-
-            location.getBlock().setBlockData(originalData.clone(), false);
-        }
-    }
-
-    private Material getCorruptedType(Material material) {
-        if (material == Material.GRASS_BLOCK) {
-            return Material.PODZOL;
-        }
-
-        if (material == Material.STONE) {
-            return ThreadLocalRandom.current().nextBoolean() ? Material.GRANITE : Material.ANDESITE;
-        }
-
-        if (Tag.FLOWERS.isTagged(material) || Tag.SMALL_FLOWERS.isTagged(material)) {
-            return Material.AIR;
-        }
-
-        return material;
     }
 
     private void removeLocatorItems(Player player, UUID graveId) {
@@ -817,19 +703,6 @@ public class GraveManager {
         return blacklistedWorlds.contains(location.getWorld().getName().toLowerCase(Locale.ROOT));
     }
 
-    private Material resolveMarkerMaterial(String configuredMaterial) {
-        if (configuredMaterial == null || configuredMaterial.isBlank()) {
-            return Material.PLAYER_HEAD;
-        }
-
-        Material resolved = Material.matchMaterial(configuredMaterial.trim(), false);
-        if (resolved == Material.CHEST || resolved == Material.PLAYER_HEAD) {
-            return resolved;
-        }
-
-        return Material.PLAYER_HEAD;
-    }
-
     private Particle resolveParticle(String configuredParticle, Particle fallback) {
         if (configuredParticle == null || configuredParticle.isBlank()) {
             return fallback;
@@ -873,33 +746,13 @@ public class GraveManager {
         return resolved;
     }
 
-    private boolean isSameBlockLocation(Location first, Location second) {
-        return first != null
-                && second != null
-                && first.getWorld() != null
-                && second.getWorld() != null
-                && first.getWorld().getUID().equals(second.getWorld().getUID())
-                && first.getBlockX() == second.getBlockX()
-                && first.getBlockY() == second.getBlockY()
-                && first.getBlockZ() == second.getBlockZ();
-    }
-
     private void indexGraveBlocks(Grave grave) {
         gravesByBlock.put(toBlockKey(grave.getLocation()), grave.getId());
 
-        Location secondaryLocation = grave.getSecondaryLocation();
-        if (secondaryLocation != null && secondaryLocation.getWorld() != null) {
-            gravesByBlock.put(toBlockKey(secondaryLocation), grave.getId());
-        }
     }
 
     private void deindexGraveBlocks(Grave grave) {
         gravesByBlock.remove(toBlockKey(grave.getLocation()));
-
-        Location secondaryLocation = grave.getSecondaryLocation();
-        if (secondaryLocation != null && secondaryLocation.getWorld() != null) {
-            gravesByBlock.remove(toBlockKey(secondaryLocation));
-        }
     }
 
     private GraveBlockKey toBlockKey(Location location) {
