@@ -93,7 +93,8 @@ public class MainCommand implements CommandExecutor, TabCompleter {
     private void openInfoMenu(Player player, List<Grave> graves) {
         int size = Math.min(54, ((graves.size() - 1) / 9 + 1) * 9);
         String menuTitle = MessageUtils.getColoredMessage(plugin.getConfigManager().getMsgInfoMenuTitle());
-        Inventory inventory = Bukkit.createInventory(null, size, PlainTextComponentSerializer.plainText().deserialize(menuTitle));
+        Inventory inventory = Bukkit.createInventory(new InfoMenuHolder(player.getUniqueId()), size,
+                PlainTextComponentSerializer.plainText().deserialize(menuTitle));
 
         for (int i = 0; i < size && i < graves.size(); i++) {
             Grave grave = graves.get(i);

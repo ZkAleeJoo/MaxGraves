@@ -39,6 +39,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.bukkit.event.inventory.InventoryDragEvent;
+import org.zkaleejoo.commands.InfoMenuHolder;
 
 public class GraveListener implements Listener {
 
@@ -446,13 +448,29 @@ public class GraveListener implements Listener {
 
     @EventHandler
     public void onInfoMenuClick(InventoryClickEvent event) {
-        String viewTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        String expectedTitle = PlainTextComponentSerializer.plainText().serialize(
-                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand()
-                        .deserialize(plugin.getConfigManager().getMsgInfoMenuTitle()));
-        if (viewTitle.equals(expectedTitle)) {
-            event.setCancelled(true);
+        if (!isInfoMenu(event)) {
+            return;
         }
+
+        event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onInfoMenuDrag(InventoryDragEvent event) {
+        if (!isInfoMenu(event)) {
+            return;
+        }
+
+        event.setCancelled(true);
+    }
+
+
+    private boolean isInfoMenu(InventoryClickEvent event) {
+        return event.getView().getTopInventory().getHolder(false) instanceof InfoMenuHolder;
+    }
+
+    private boolean isInfoMenu(InventoryDragEvent event) {
+        return event.getView().getTopInventory().getHolder(false) instanceof InfoMenuHolder;
     }
 
     private void handleLocatorUse(PlayerInteractEvent event) {
