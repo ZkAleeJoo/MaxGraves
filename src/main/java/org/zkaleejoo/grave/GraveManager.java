@@ -101,15 +101,19 @@ public class GraveManager {
         this.effectsSpiralHeight = plugin.getConfigManager().getEffectsSpiralHeight();
         this.effectsVerticalSpeed = plugin.getConfigManager().getEffectsVerticalSpeed();
         this.effectsAmbientSoundEnabled = plugin.getConfigManager().isEffectsAmbientSoundEnabled();
-        this.effectsAmbientSound = resolveSound(plugin.getConfigManager().getEffectsAmbientSound(),
-                Sound.BLOCK_SOUL_SAND_HIT);
+        this.effectsAmbientSound = resolveSound(
+                plugin.getConfigManager().getEffectsAmbientSound(),
+                Sound.BLOCK_SOUL_SAND_HIT,
+                "grave.effects.ambient-sound.type");
         this.effectsAmbientSoundVolume = plugin.getConfigManager().getEffectsAmbientSoundVolume();
         this.effectsAmbientSoundPitch = plugin.getConfigManager().getEffectsAmbientSoundPitch();
         this.claimAnimationEnabled = plugin.getConfigManager().isClaimAnimationEnabled();
         this.claimAnimationDelayTicks = plugin.getConfigManager().getClaimAnimationDelayTicks();
         this.claimAnimationLightningEnabled = plugin.getConfigManager().isClaimAnimationLightningEnabled();
-        this.claimAnimationSound = resolveSound(plugin.getConfigManager().getClaimAnimationSound(),
-                Sound.ITEM_TOTEM_USE);
+        this.claimAnimationSound = resolveSound(
+                plugin.getConfigManager().getClaimAnimationSound(),
+                Sound.ITEM_TOTEM_USE,
+                "grave.claim-animation.sound.type");
         this.claimAnimationSoundVolume = plugin.getConfigManager().getClaimAnimationSoundVolume();
         this.claimAnimationSoundPitch = plugin.getConfigManager().getClaimAnimationSoundPitch();
 
@@ -840,21 +844,28 @@ public class GraveManager {
         }
     }
 
-    private Sound resolveSound(String configuredSound, Sound fallback) {
+    private Sound resolveSound(String configuredSound, Sound fallback, String configPath) {
         if (configuredSound == null || configuredSound.isBlank()) {
             return fallback;
         }
 
-        NamespacedKey key = NamespacedKey.fromString(configuredSound.trim().toLowerCase(Locale.ROOT));
+        String trimmedSound = configuredSound.trim();
+
+        try {
+            return Sound.valueOf(trimmedSound.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ignored) {
+        }
+
+        NamespacedKey key = NamespacedKey.fromString(trimmedSound.toLowerCase(Locale.ROOT));
         if (key == null) {
-            plugin.getLogger().warning("Invalid sound key for grave.effects.ambient-sound.type: " + configuredSound
+            plugin.getLogger().warning("Invalid sound key for " + configPath + ": " + configuredSound
                     + ". Falling back to " + fallback + '.');
             return fallback;
         }
 
         Sound resolved = Registry.SOUNDS.get(key);
         if (resolved == null) {
-            plugin.getLogger().warning("Unknown sound for grave.effects.ambient-sound.type: " + configuredSound
+            plugin.getLogger().warning("Unknown sound for " + configPath + ": " + configuredSound
                     + ". Falling back to " + fallback + '.');
             return fallback;
         }
