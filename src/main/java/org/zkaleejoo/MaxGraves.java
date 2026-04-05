@@ -8,13 +8,11 @@ import org.zkaleejoo.grave.GraveManager;
 import org.zkaleejoo.listeners.GraveListener;
 import org.zkaleejoo.utils.MessageUtils;
 import org.zkaleejoo.utils.UpdateChecker;
-import net.md_5.bungee.api.ChatColor;
 
 public final class MaxGraves extends JavaPlugin {
 
     private MainConfigManager mainConfigManager;
     private GraveManager graveManager;
-    private String version = getDescription().getVersion();
     private String latestVersion;
 
     //PLUGIN ENCIENDE
@@ -30,14 +28,14 @@ public final class MaxGraves extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new GraveListener(this), this);
 
-        Bukkit.getConsoleSender().sendMessage(ChatColor.DARK_PURPLE+"   _____                  ________                                 ");
-        Bukkit.getConsoleSender().sendMessage(ChatColor.DARK_PURPLE+"  /     \\ _____  ___  ___/  _____/___________ ___  __ ____   ______");
-        Bukkit.getConsoleSender().sendMessage(ChatColor.DARK_PURPLE+" /  \\ /  \\\\__  \\ \\  \\/  /   \\  __\\_  __ \\__  \\\\  \\/ // __ \\ /  ___/");
-        Bukkit.getConsoleSender().sendMessage(ChatColor.DARK_PURPLE+"/    Y    \\/ __ \\_>    <\\    \\_\\  \\  | \\// __ \\\\   /\\  ___/ \\___ \\ ");
-        Bukkit.getConsoleSender().sendMessage(ChatColor.DARK_PURPLE+"\\____|__  (____  /__/\\_ \\\\______  /__|  (____  /\\_/  \\___  >____  >");
-        Bukkit.getConsoleSender().sendMessage(ChatColor.DARK_PURPLE+"        \\/     \\/      \\/       \\/           \\/          \\/     \\/ ");
+        Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage("&#8A2BE2&lMaxGraves &8» &5   _____      _____  ____  _____________________    _________   _______________ _________"));
+        Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage("&#8A2BE2&lMaxGraves &8» &5  /     \\    /  _  \\ \\   \\/  /  _____/\\______   \\  /  _  \\   \\ /   /\\_   _____//   _____/"));
+        Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage("&#8A2BE2&lMaxGraves &8» &5 /  \\ /  \\  /  /_\\  \\ \\     /   \\  ___ |       _/ /  /_\\  \\   Y   /  |    __)_ \\_____  \\ "));
+        Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage("&#8A2BE2&lMaxGraves &8» &5/    Y    \\/    |    \\/     \\    \\_\\  \\|    |   \\/    |    \\     /   |        \\/        \\"));
+        Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage("&#8A2BE2&lMaxGraves &8» &5\\____|__  /\\____|__  /___/\\  \\______  /|____|_  /\\____|__  /\\___/   /_______  /_______  /"));
+        Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage("&#8A2BE2&lMaxGraves &8» &5        \\/         \\/      \\_/      \\/        \\/         \\/                 \\/        \\/ "));
 
-        Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage("&#8A2BE2&lMaxGraves &8» &fThe plugin has been enabled! Version: " + version));
+        Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage("&#8A2BE2&lMaxGraves &8» &fThe plugin has been enabled! Version: "));
         
         checkUpdates();
     }
@@ -48,7 +46,7 @@ public final class MaxGraves extends JavaPlugin {
             graveManager.clearAll();
         }
 
-        Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage("&#8A2BE2&lMaxGraves &8» &fThe plugin has been disabled! Version: " + version));
+        Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage("&#8A2BE2&lMaxGraves &8» &fThe plugin has been disabled! Version: "));
     }
 
     private void registerCommand(String name, org.bukkit.command.CommandExecutor executor, org.bukkit.command.TabCompleter tabCompleter) {
@@ -73,7 +71,7 @@ public final class MaxGraves extends JavaPlugin {
 
     private void checkUpdates() {
         new UpdateChecker(this).getVersion(version -> {
-            if (this.getDescription().getVersion().equalsIgnoreCase(version)) {
+            if (this.getPluginMeta().getVersion().equalsIgnoreCase(version)) {
                 getLogger().info("You are using the latest version!");
             } else {
                 this.latestVersion = version;

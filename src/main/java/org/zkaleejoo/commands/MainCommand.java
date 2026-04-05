@@ -1,5 +1,7 @@
 package org.zkaleejoo.commands;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -91,7 +93,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
     private void openInfoMenu(Player player, List<Grave> graves) {
         int size = Math.min(54, ((graves.size() - 1) / 9 + 1) * 9);
         String menuTitle = MessageUtils.getColoredMessage(plugin.getConfigManager().getMsgInfoMenuTitle());
-        Inventory inventory = Bukkit.createInventory(null, size, menuTitle);
+        Inventory inventory = Bukkit.createInventory(null, size, PlainTextComponentSerializer.plainText().deserialize(menuTitle));
 
         for (int i = 0; i < size && i < graves.size(); i++) {
             Grave grave = graves.get(i);
@@ -116,14 +118,14 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         Location location = grave.getLocation();
         String worldName = location.getWorld() != null ? location.getWorld().getName() : "unknown";
 
-        meta.setDisplayName(MessageUtils.getColoredMessage(
+        meta.displayName(MessageUtils.getColoredComponent(
                 plugin.getConfigManager().getMsgInfoMenuItemName().replace("{index}", String.valueOf(index))));
 
-        List<String> lore = plugin.getConfigManager().getMsgInfoMenuLore().stream()
+        List<Component> lore = plugin.getConfigManager().getMsgInfoMenuLore().stream()
                 .map(line -> replaceInfoMenuPlaceholders(line, grave, worldName, index))
-                .map(MessageUtils::getColoredMessage)
+                .map(MessageUtils::getColoredComponent)
                 .toList();
-        meta.setLore(lore);
+        meta.lore(lore);
 
         item.setItemMeta(meta);
         return item;

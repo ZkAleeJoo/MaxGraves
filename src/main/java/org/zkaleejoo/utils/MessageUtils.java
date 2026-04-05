@@ -1,5 +1,7 @@
 package org.zkaleejoo.utils;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.md_5.bungee.api.ChatColor;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -24,6 +26,10 @@ public class MessageUtils {
         message = matcher.appendTail(buffer).toString();
 
         return ChatColor.translateAlternateColorCodes('&', message);
+    }
+
+    public static Component getColoredComponent(String message) {
+        return LegacyComponentSerializer.legacySection().deserialize(getColoredMessage(message));
     }
 
     public static void broadcastToPlayersOnly(String message) {

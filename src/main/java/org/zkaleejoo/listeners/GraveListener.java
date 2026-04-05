@@ -20,6 +20,7 @@ import org.zkaleejoo.MaxGraves;
 import org.zkaleejoo.grave.Grave;
 import org.zkaleejoo.utils.MessageUtils;
 import java.util.Optional;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import java.util.UUID;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
@@ -263,9 +264,11 @@ public class GraveListener implements Listener {
             return owner.getName() + "'s " + formatEntityTypeName(entity);
         }
 
-        if (entity instanceof LivingEntity livingEntity && livingEntity.getCustomName() != null
-                && !livingEntity.getCustomName().isBlank()) {
-            return livingEntity.getCustomName();
+        if (entity instanceof LivingEntity livingEntity && livingEntity.customName() != null) {
+            String customName = PlainTextComponentSerializer.plainText().serialize(livingEntity.customName());
+            if (!customName.isBlank()) {
+                return customName;
+            }
         }
 
         return formatEntityTypeName(entity);
@@ -443,8 +446,11 @@ public class GraveListener implements Listener {
 
     @EventHandler
     public void onInfoMenuClick(InventoryClickEvent event) {
-        if (event.getView().getTitle()
-                .equals(MessageUtils.getColoredMessage(plugin.getConfigManager().getMsgInfoMenuTitle()))) {
+        String viewTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        String expectedTitle = PlainTextComponentSerializer.plainText().serialize(
+                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand()
+                        .deserialize(plugin.getConfigManager().getMsgInfoMenuTitle()));
+        if (viewTitle.equals(expectedTitle)) {
             event.setCancelled(true);
         }
     }

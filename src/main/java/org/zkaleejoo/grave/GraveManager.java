@@ -29,6 +29,11 @@ import org.bukkit.World;
 import org.bukkit.entity.ExperienceOrb;
 
 import java.util.*;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import io.papermc.paper.datacomponent.item.ResolvableProfile;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
+
 
 public class GraveManager {
 
@@ -600,7 +605,7 @@ public class GraveManager {
                 spawned.setPersistent(false);
             });
 
-            stand.setCustomName(getHologramLine(grave, lineIndex));
+            stand.customName(LegacyComponentSerializer.legacySection().deserialize(getHologramLine(grave, lineIndex)));
             entityIds.add(stand.getUniqueId());
         }
 
@@ -626,7 +631,7 @@ public class GraveManager {
             if (!(entity instanceof ArmorStand stand) || stand.isDead()) {
                 continue;
             }
-            stand.setCustomName(getHologramLine(grave, i));
+            stand.customName(LegacyComponentSerializer.legacySection().deserialize(getHologramLine(grave, i)));
         }
     }
 
@@ -697,7 +702,7 @@ public class GraveManager {
         Location loc = grave.getLocation();
         String worldName = loc.getWorld() != null ? loc.getWorld().getName() : "unknown";
 
-        meta.setDisplayName(MessageUtils.getColoredMessage(plugin.getConfigManager().getMsgLocatorItemName()));
+        meta.displayName(LegacyComponentSerializer.legacySection().deserialize(MessageUtils.getColoredMessage(plugin.getConfigManager().getMsgLocatorItemName())));
 
         String worldLine = plugin.getConfigManager().getMsgLocatorItemWorld()
                 .replace("{world}", worldName);
@@ -706,10 +711,10 @@ public class GraveManager {
                 .replace("{y}", String.valueOf(loc.getBlockY()))
                 .replace("{z}", String.valueOf(loc.getBlockZ()));
 
-        meta.setLore(List.of(
-                MessageUtils.getColoredMessage(worldLine),
-                MessageUtils.getColoredMessage(coordinatesLine),
-                MessageUtils.getColoredMessage(plugin.getConfigManager().getMsgLocatorItemAction())));
+        meta.lore(List.of(
+                LegacyComponentSerializer.legacySection().deserialize(MessageUtils.getColoredMessage(worldLine)),
+                LegacyComponentSerializer.legacySection().deserialize(MessageUtils.getColoredMessage(coordinatesLine)),
+                LegacyComponentSerializer.legacySection().deserialize(MessageUtils.getColoredMessage(plugin.getConfigManager().getMsgLocatorItemAction()))));
 
         meta.getPersistentDataContainer().set(keys.graveIdKey(), PersistentDataType.STRING, grave.getId().toString());
         locator.setItemMeta(meta);
@@ -789,7 +794,7 @@ public class GraveManager {
         block.setType(graveMarkerMaterial, false);
 
         if (graveMarkerMaterial == Material.PLAYER_HEAD && block.getState() instanceof Skull skull) {
-            skull.setOwningPlayer(player);
+            skull.setProfile(ResolvableProfile.resolvableProfile(player.getPlayerProfile()));
             skull.update(true, false);
         }
 
@@ -835,19 +840,26 @@ public class GraveManager {
         }
     }
 
-    @SuppressWarnings("deprecation")
     private Sound resolveSound(String configuredSound, Sound fallback) {
         if (configuredSound == null || configuredSound.isBlank()) {
             return fallback;
         }
 
-        try {
-            return Sound.valueOf(configuredSound.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException ex) {
-            plugin.getLogger().warning("Invalid sound for grave.effects.ambient-sound.type: " + configuredSound
+        NamespacedKey key = NamespacedKey.fromString(configuredSound.trim().toLowerCase(Locale.ROOT));
+        if (key == null) {
+            plugin.getLogger().warning("Invalid sound key for grave.effects.ambient-sound.type: " + configuredSound
                     + ". Falling back to " + fallback + '.');
             return fallback;
         }
+
+        Sound resolved = Registry.SOUNDS.get(key);
+        if (resolved == null) {
+            plugin.getLogger().warning("Unknown sound for grave.effects.ambient-sound.type: " + configuredSound
+                    + ". Falling back to " + fallback + '.');
+            return fallback;
+        }
+
+        return resolved;
     }
 
     private boolean isSameBlockLocation(Location first, Location second) {
