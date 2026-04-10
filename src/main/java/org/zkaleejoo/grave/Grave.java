@@ -1,14 +1,11 @@
 package org.zkaleejoo.grave;
 
 import org.bukkit.Location;
-import org.bukkit.block.data.BlockData;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 public class Grave {
