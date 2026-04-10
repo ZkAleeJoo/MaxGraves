@@ -8,6 +8,7 @@ import org.zkaleejoo.grave.GraveManager;
 import org.zkaleejoo.listeners.GraveListener;
 import org.zkaleejoo.utils.MessageUtils;
 import org.zkaleejoo.utils.UpdateChecker;
+import org.bstats.bukkit.Metrics;
 
 public final class MaxGraves extends JavaPlugin {
 
@@ -38,6 +39,9 @@ public final class MaxGraves extends JavaPlugin {
         Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage("&#8A2BE2&lMaxGraves &8» &#8A2BE2The plugin has been enabled! Version: "));
         
         checkUpdates();
+
+        int pluginId = 30703; 
+        Metrics metrics = new Metrics(this, pluginId);
     }
 
     @Override
