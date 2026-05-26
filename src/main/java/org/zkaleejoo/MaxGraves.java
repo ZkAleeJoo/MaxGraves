@@ -109,7 +109,7 @@ public final class MaxGraves extends JavaPlugin {
             if (this.getPluginMeta().getVersion().equalsIgnoreCase(version)) {
                 this.latestVersion = null;
                 Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage(
-                        "&5&lMaxGraves &8\u00BB &aA check for updates was performed and nothing was found."));
+                        "&5&lMaxGraves &8» &aA check for updates was performed and nothing was found."));
             } else {
                 this.latestVersion = version;
 
