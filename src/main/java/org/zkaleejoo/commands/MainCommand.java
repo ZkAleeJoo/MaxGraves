@@ -41,9 +41,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            plugin.reloadConfig();
-            plugin.getConfigManager().reloadConfig();
-            plugin.getGraveManager().reloadSettings();
+            plugin.reloadPluginState();
             sender.sendMessage(MessageUtils.getColoredMessage(plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgPluginReload()));
             return true;
         }

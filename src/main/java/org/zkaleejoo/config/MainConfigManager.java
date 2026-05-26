@@ -19,6 +19,8 @@ public class MainConfigManager {
     // VARIABLES CONFIG
     private String selectedLanguage;
     private String prefix;
+    private boolean updateCheckEnabled;
+    private boolean bStatsEnabled;
     private int graveDespawnTime;
     private boolean createOnDeath;
     private boolean hologramEnabled;
@@ -80,6 +82,9 @@ public class MainConfigManager {
     private String msgInfoMenuItemName;
     private List<String> msgInfoMenuLore;
     private String msgWorldBlacklisted;
+    private String msgUpdateAvailable;
+    private String msgUpdateCurrent;
+    private String msgUpdateDownload;
 
     public MainConfigManager(MaxGraves plugin) {
         this.plugin = plugin;
@@ -100,6 +105,8 @@ public class MainConfigManager {
 
         // CONFIG
         prefix = config.getString("general.prefix", "&#8A2BE2&lMaxGraves &8» ");
+        updateCheckEnabled = config.getBoolean("general.update-check", true);
+        bStatsEnabled = config.getBoolean("general.bstats", true);
         graveDespawnTime = config.getInt("grave.despawn-time", 3600);
         graveSearchMaxRadius = Math.max(config.getInt("grave.search-max-radius", 6), 1);
         debugDeathEvents = config.getBoolean("grave.debug-death-events", false);
@@ -194,6 +201,11 @@ public class MainConfigManager {
                 : List.copyOf(configuredInfoMenuLore);
         msgWorldBlacklisted = lang.getString("messages.world-blacklisted",
                 "&cGraves are disabled in this world.");
+        msgUpdateAvailable = lang.getString("messages.update-available",
+                "&#00E676&lA new version is available! &#555555(&#FFFFFF{version}&#555555)");
+        msgUpdateCurrent = lang.getString("messages.update-current", "&#AAAAAAYour current version: &#FF5555{version}");
+        msgUpdateDownload = lang.getString("messages.update-download",
+                "&#00E676Download it to get improvements and fixes.");
     }
 
     public void reloadConfig() {
@@ -206,6 +218,14 @@ public class MainConfigManager {
     // GETTERS
     public String getPrefix() {
         return prefix;
+    }
+
+    public boolean isUpdateCheckEnabled() {
+        return updateCheckEnabled;
+    }
+
+    public boolean isBStatsEnabled() {
+        return bStatsEnabled;
     }
 
     public int getGraveDespawnTime() {
@@ -442,5 +462,17 @@ public class MainConfigManager {
 
     public boolean isPublicPlayerKillAccess() {
         return publicPlayerKillAccess;
+    }
+
+    public String getMsgUpdateAvailable() {
+        return msgUpdateAvailable;
+    }
+
+    public String getMsgUpdateCurrent() {
+        return msgUpdateCurrent;
+    }
+
+    public String getMsgUpdateDownload() {
+        return msgUpdateDownload;
     }
 }

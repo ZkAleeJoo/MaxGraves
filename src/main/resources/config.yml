@@ -10,6 +10,10 @@
 #For problems, bugs, ideas or suggestions you can do it on the discord server.
 general:
   language: "en"
+  #Check for updates on startup and periodically while the server is running?
+  update-check: true
+  #Send anonymous usage metrics to bStats?
+  bstats: true
   prefix: "&#8A2BE2&lMaxGraves &8» "
 
 grave:
