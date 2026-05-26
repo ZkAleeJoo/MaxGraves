@@ -30,7 +30,6 @@ import io.papermc.paper.datacomponent.item.ResolvableProfile;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 
-
 public class GraveManager {
 
     private final MaxGraves plugin;
@@ -589,7 +588,8 @@ public class GraveManager {
         Location loc = grave.getLocation();
         String worldName = loc.getWorld() != null ? loc.getWorld().getName() : "unknown";
 
-        meta.displayName(LegacyComponentSerializer.legacySection().deserialize(MessageUtils.getColoredMessage(plugin.getConfigManager().getMsgLocatorItemName())));
+        meta.displayName(LegacyComponentSerializer.legacySection()
+                .deserialize(MessageUtils.getColoredMessage(plugin.getConfigManager().getMsgLocatorItemName())));
 
         String worldLine = plugin.getConfigManager().getMsgLocatorItemWorld()
                 .replace("{world}", worldName);
@@ -601,7 +601,8 @@ public class GraveManager {
         meta.lore(List.of(
                 LegacyComponentSerializer.legacySection().deserialize(MessageUtils.getColoredMessage(worldLine)),
                 LegacyComponentSerializer.legacySection().deserialize(MessageUtils.getColoredMessage(coordinatesLine)),
-                LegacyComponentSerializer.legacySection().deserialize(MessageUtils.getColoredMessage(plugin.getConfigManager().getMsgLocatorItemAction()))));
+                LegacyComponentSerializer.legacySection().deserialize(
+                        MessageUtils.getColoredMessage(plugin.getConfigManager().getMsgLocatorItemAction()))));
 
         meta.getPersistentDataContainer().set(keys.graveIdKey(), PersistentDataType.STRING, grave.getId().toString());
         locator.setItemMeta(meta);
@@ -721,26 +722,29 @@ public class GraveManager {
 
         String trimmedSound = configuredSound.trim();
 
-        try {
-            return Sound.valueOf(trimmedSound.toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException ignored) {
-        }
-
         NamespacedKey key = NamespacedKey.fromString(trimmedSound.toLowerCase(Locale.ROOT));
-        if (key == null) {
-            plugin.getLogger().warning("Invalid sound key for " + configPath + ": " + configuredSound
-                    + ". Falling back to " + fallback + '.');
-            return fallback;
+        if (key != null) {
+            Sound resolved = Registry.SOUNDS.get(key);
+            if (resolved != null) {
+                return resolved;
+            }
         }
 
-        Sound resolved = Registry.SOUNDS.get(key);
-        if (resolved == null) {
-            plugin.getLogger().warning("Unknown sound for " + configPath + ": " + configuredSound
-                    + ". Falling back to " + fallback + '.');
-            return fallback;
+        String canonicalInput = trimmedSound.toLowerCase(Locale.ROOT).replace("_", "").replace(".", "");
+        for (Sound sound : Registry.SOUNDS) {
+            NamespacedKey soundKey = Registry.SOUNDS.getKey(sound);
+            if (soundKey == null) {
+                continue;
+            }
+            String soundKeyStr = soundKey.getKey().toLowerCase(Locale.ROOT).replace("_", "").replace(".", "");
+            if (soundKeyStr.equals(canonicalInput)) {
+                return sound;
+            }
         }
 
-        return resolved;
+        plugin.getLogger().warning("Unknown sound for " + configPath + ": " + configuredSound
+                + ". Falling back to " + fallback + '.');
+        return fallback;
     }
 
     private void indexGraveBlocks(Grave grave) {

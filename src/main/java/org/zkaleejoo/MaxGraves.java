@@ -86,16 +86,12 @@ public final class MaxGraves extends JavaPlugin {
                 this.latestVersion = version;
 
                 Bukkit.getConsoleSender()
-                        .sendMessage(MessageUtils.getColoredMessage("&#8A2BE2&lMaxGraves &8» &a&lUPDATE AVAILABLE!"));
-                Bukkit.getConsoleSender().sendMessage(MessageUtils
-                        .getColoredMessage("&#8A2BE2&lMaxGraves &8» &7A new version of the plugin has been detected."));
-                Bukkit.getConsoleSender().sendMessage(
-                        MessageUtils.getColoredMessage("&#8A2BE2&lMaxGraves &8» &7Available version: &a" + version));
+                        .sendMessage(MessageUtils
+                                .getColoredMessage("&#8A2BE2&lMaxGraves &8» &a&lUPDATE AVAILABLE! " + version));
                 Bukkit.getConsoleSender().sendMessage(
                         MessageUtils
-                                .getColoredMessage("&#8A2BE2&lMaxGraves &8» &eDownload it now at the following link:"));
-                Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage(
-                        "&#8A2BE2&lMaxGraves &8» &a&nhttps://modrinth.com/plugin/maxgraves"));
+                                .getColoredMessage(
+                                        "&#8A2BE2&lMaxGraves &8» &eDownload it now at the following link: &7https://modrinth.com/plugin/maxgraves"));
             }
         });
     }
