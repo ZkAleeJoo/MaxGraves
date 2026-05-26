@@ -25,6 +25,16 @@ grave:
   #Enables detailed console traces for PlayerDeathEvent processing and final drops/exp state
   debug-death-events: false
   create-on-death: true
+  marker:
+    #Visual block used for new graves. Available: HEAD, CHEST
+    #HEAD uses the dead player's skin, holograms, particles and claim animation.
+    #CHEST places a chest block and opens a grave inventory where items can be taken one by one.
+    #Warning: CHEST keeps holograms but ignores particles and claim animations.
+    type: "HEAD"
+  access:
+    #If true, graves from player kills can be opened/looted by anyone.
+    #This is false by default so existing private-grave behavior is preserved.
+    public-player-kill: false
   info-menu:
     item:
       #Material used for each grave entry in /maxgraves info menu

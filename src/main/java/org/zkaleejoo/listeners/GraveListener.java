@@ -3,6 +3,7 @@ package org.zkaleejoo.listeners;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.Container;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
@@ -11,13 +12,19 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.zkaleejoo.MaxGraves;
 import org.zkaleejoo.grave.Grave;
+import org.zkaleejoo.grave.GraveChestHolder;
+import org.zkaleejoo.grave.GraveMarkerType;
 import org.zkaleejoo.utils.MessageUtils;
 import java.util.Optional;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -130,9 +137,10 @@ public class GraveListener implements Listener {
         int graveExp = event.getKeepLevel() ? 0 : resolveGraveExp(event, snapshot);
 
         String killerName = resolveKillerName(player);
+        boolean killedByPlayer = wasKilledByPlayer(player);
 
         plugin.getGraveManager()
-                .createGrave(player, player.getLocation(), graveItems, graveExp, killerName)
+                .createGrave(player, player.getLocation(), graveItems, graveExp, killerName, killedByPlayer)
                 .ifPresentOrElse(grave -> {
                     int dropsBeforeClear = event.getDrops().size();
                     int expBeforeClear = event.getDroppedExp();
@@ -257,6 +265,28 @@ public class GraveListener implements Listener {
         return getEntityDisplayName(damager);
     }
 
+    private boolean wasKilledByPlayer(Player player) {
+        if (player.getKiller() != null) {
+            return true;
+        }
+
+        EntityDamageEvent lastDamageCause = player.getLastDamageCause();
+        if (!(lastDamageCause instanceof EntityDamageByEntityEvent damageByEntityEvent)) {
+            return false;
+        }
+
+        Entity damager = damageByEntityEvent.getDamager();
+        if (damager instanceof Player) {
+            return true;
+        }
+
+        if (damager instanceof Projectile projectile) {
+            return projectile.getShooter() instanceof Player;
+        }
+
+        return false;
+    }
+
     private String getEntityDisplayName(Entity entity) {
         if (entity instanceof Player killerPlayer) {
             return killerPlayer.getName();
@@ -356,13 +386,18 @@ public class GraveListener implements Listener {
         Player player = event.getPlayer();
         Grave grave = graveOptional.get();
 
-        if (!grave.getOwner().equals(player.getUniqueId())) {
+        if (!plugin.getGraveManager().canAccessGrave(player, grave)) {
             player.sendMessage(MessageUtils.getColoredMessage(
                     plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgOnlyOwnerCanClaim()));
             return true;
         }
 
         if (cancelledByAnotherPlugin) {
+            return true;
+        }
+
+        if (grave.getMarkerType() == GraveMarkerType.CHEST) {
+            plugin.getGraveManager().openGraveChest(player, grave);
             return true;
         }
 
@@ -392,13 +427,18 @@ public class GraveListener implements Listener {
         Player player = event.getPlayer();
         Grave grave = graveOptional.get();
 
-        if (!grave.getOwner().equals(player.getUniqueId())) {
+        if (!plugin.getGraveManager().canAccessGrave(player, grave)) {
             player.sendMessage(MessageUtils.getColoredMessage(
                     plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgOnlyOwnerCanClaim()));
             return;
         }
 
         if (cancelledByAnotherPlugin) {
+            return;
+        }
+
+        if (grave.getMarkerType() == GraveMarkerType.CHEST) {
+            plugin.getGraveManager().openGraveChest(player, grave);
             return;
         }
 
@@ -446,9 +486,17 @@ public class GraveListener implements Listener {
         }
     }
 
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onInventoryMoveItem(InventoryMoveItemEvent event) {
+        if (isPhysicalGraveContainer(event.getSource()) || isPhysicalGraveContainer(event.getDestination())) {
+            event.setCancelled(true);
+        }
+    }
+
     @EventHandler
     public void onInfoMenuClick(InventoryClickEvent event) {
         if (!isInfoMenu(event)) {
+            handleGraveChestClick(event);
             return;
         }
 
@@ -458,6 +506,7 @@ public class GraveListener implements Listener {
     @EventHandler
     public void onInfoMenuDrag(InventoryDragEvent event) {
         if (!isInfoMenu(event)) {
+            handleGraveChestDrag(event);
             return;
         }
 
@@ -471,6 +520,68 @@ public class GraveListener implements Listener {
 
     private boolean isInfoMenu(InventoryDragEvent event) {
         return event.getView().getTopInventory().getHolder(false) instanceof InfoMenuHolder;
+    }
+
+    private void handleGraveChestClick(InventoryClickEvent event) {
+        Inventory topInventory = event.getView().getTopInventory();
+        if (!(topInventory.getHolder(false) instanceof GraveChestHolder holder)) {
+            return;
+        }
+
+        boolean clickedTopInventory = event.getRawSlot() >= 0 && event.getRawSlot() < topInventory.getSize();
+        if (!clickedTopInventory) {
+            if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY
+                    || event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
+                event.setCancelled(true);
+            }
+            return;
+        }
+
+        if (!isGraveChestExtractionAction(event.getAction())) {
+            event.setCancelled(true);
+            return;
+        }
+
+        if (!(event.getWhoClicked() instanceof Player player)) {
+            event.setCancelled(true);
+            return;
+        }
+
+        plugin.getServer().getScheduler().runTask(plugin,
+                () -> plugin.getGraveManager().syncGraveChestInventory(player, holder.getGraveId(), topInventory));
+    }
+
+    private void handleGraveChestDrag(InventoryDragEvent event) {
+        Inventory topInventory = event.getView().getTopInventory();
+        if (!(topInventory.getHolder(false) instanceof GraveChestHolder)) {
+            return;
+        }
+
+        boolean affectsGraveChest = event.getRawSlots().stream()
+                .anyMatch(slot -> slot >= 0 && slot < topInventory.getSize());
+        if (affectsGraveChest) {
+            event.setCancelled(true);
+        }
+    }
+
+    private boolean isGraveChestExtractionAction(InventoryAction action) {
+        return action == InventoryAction.PICKUP_ALL
+                || action == InventoryAction.PICKUP_SOME
+                || action == InventoryAction.PICKUP_HALF
+                || action == InventoryAction.PICKUP_ONE
+                || action == InventoryAction.MOVE_TO_OTHER_INVENTORY
+                || action == InventoryAction.DROP_ALL_SLOT
+                || action == InventoryAction.DROP_ONE_SLOT
+                || action == InventoryAction.NOTHING;
+    }
+
+    private boolean isPhysicalGraveContainer(Inventory inventory) {
+        InventoryHolder holder = inventory.getHolder(false);
+        if (!(holder instanceof Container container)) {
+            return false;
+        }
+
+        return plugin.getGraveManager().getGraveByMarkerBlock(container.getBlock()).isPresent();
     }
 
     private void handleLocatorUse(PlayerInteractEvent event) {
@@ -511,6 +622,10 @@ public class GraveListener implements Listener {
     }
 
     private boolean isGraveMarker(Block block) {
+        if (plugin.getGraveManager().getGraveByMarkerBlock(block).isPresent()) {
+            return true;
+        }
+
         Material marker = plugin.getGraveManager().getGraveMarkerMaterial();
         if (block.getType() == marker) {
             return true;

@@ -3,6 +3,7 @@ package org.zkaleejoo.config;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.zkaleejoo.MaxGraves;
+import org.zkaleejoo.grave.GraveMarkerType;
 
 import java.util.List;
 import java.util.Locale;
@@ -48,6 +49,8 @@ public class MainConfigManager {
     private int graveSearchMaxRadius;
     private Set<String> graveBlacklistedWorlds;
     private boolean debugDeathEvents;
+    private GraveMarkerType graveMarkerType;
+    private boolean publicPlayerKillAccess;
 
     // VARIABLES MENSAJES
     private String msgNoPermission;
@@ -101,6 +104,13 @@ public class MainConfigManager {
         graveSearchMaxRadius = Math.max(config.getInt("grave.search-max-radius", 6), 1);
         debugDeathEvents = config.getBoolean("grave.debug-death-events", false);
         createOnDeath = config.getBoolean("grave.create-on-death", true);
+        graveMarkerType = GraveMarkerType.fromConfig(config.getString("grave.marker.type", "HEAD"));
+        String configuredMarkerType = config.getString("grave.marker.type", "HEAD");
+        if (!graveMarkerType.name().equalsIgnoreCase(configuredMarkerType == null ? "HEAD" : configuredMarkerType.trim())) {
+            plugin.getLogger().warning("Invalid marker type for grave.marker.type: "
+                    + configuredMarkerType + ". Falling back to HEAD.");
+        }
+        publicPlayerKillAccess = config.getBoolean("grave.access.public-player-kill", false);
         graveBlacklistedWorlds = config.getStringList("grave.blacklisted-worlds").stream()
                 .filter(worldName -> worldName != null && !worldName.isBlank())
                 .map(worldName -> worldName.trim().toLowerCase(Locale.ROOT))
@@ -424,5 +434,13 @@ public class MainConfigManager {
 
     public boolean isDebugDeathEvents() {
         return debugDeathEvents;
+    }
+
+    public GraveMarkerType getGraveMarkerType() {
+        return graveMarkerType;
+    }
+
+    public boolean isPublicPlayerKillAccess() {
+        return publicPlayerKillAccess;
     }
 }

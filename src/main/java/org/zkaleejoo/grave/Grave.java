@@ -1,6 +1,8 @@
 package org.zkaleejoo.grave;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
@@ -19,9 +21,11 @@ public class Grave {
     private final int ownerLevel;
     private final String killerName;
     private final long despawnAtMillis;
+    private final GraveMarkerType markerType;
+    private final boolean publicAccess;
 
     public Grave(UUID id, UUID owner, String ownerName, int ownerLevel, String killerName, Location location,
-            List<ItemStack> items, int exp, long despawnAtMillis) {
+            List<ItemStack> items, int exp, long despawnAtMillis, GraveMarkerType markerType, boolean publicAccess) {
         this.id = id;
         this.owner = owner;
         this.ownerName = ownerName;
@@ -31,6 +35,8 @@ public class Grave {
         this.items = new ArrayList<>(items);
         this.exp = exp;
         this.despawnAtMillis = despawnAtMillis;
+        this.markerType = markerType;
+        this.publicAccess = publicAccess;
     }
 
     public UUID getId() {
@@ -47,6 +53,20 @@ public class Grave {
 
     public List<ItemStack> getItems() {
         return Collections.unmodifiableList(items);
+    }
+
+    public void replaceItemsFromInventory(Inventory inventory) {
+        items.clear();
+        for (ItemStack item : inventory.getContents()) {
+            if (item != null && item.getType() != Material.AIR) {
+                items.add(item.clone());
+            }
+        }
+    }
+
+    public boolean isEmpty() {
+        return items.stream()
+                .allMatch(item -> item == null || item.getType() == Material.AIR);
     }
 
     public int getExp() {
@@ -67,5 +87,13 @@ public class Grave {
 
     public long getDespawnAtMillis() {
         return despawnAtMillis;
+    }
+
+    public GraveMarkerType getMarkerType() {
+        return markerType;
+    }
+
+    public boolean isPublicAccess() {
+        return publicAccess;
     }
 }

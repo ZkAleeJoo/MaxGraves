@@ -4,12 +4,15 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.Container;
 import org.bukkit.block.Skull;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -41,6 +44,8 @@ public class GraveManager {
     private final Map<UUID, List<UUID>> hologramEntitiesByGrave = new HashMap<>();
     private final Map<UUID, BukkitTask> hologramTasks = new HashMap<>();
     private final Map<UUID, BukkitTask> particleTasks = new HashMap<>();
+    private final Map<UUID, Inventory> graveChestInventories = new HashMap<>();
+    private GraveMarkerType graveMarkerType;
     private Material graveMarkerMaterial;
     private int graveSearchMaxRadius;
     private boolean hologramEnabled;
@@ -76,7 +81,8 @@ public class GraveManager {
     }
 
     public void reloadSettings() {
-        this.graveMarkerMaterial = Material.PLAYER_HEAD;
+        this.graveMarkerType = plugin.getConfigManager().getGraveMarkerType();
+        this.graveMarkerMaterial = graveMarkerType.getMaterial();
         this.graveSearchMaxRadius = Math.max(plugin.getConfigManager().getGraveSearchMaxRadius(), 1);
         this.blacklistedWorlds = plugin.getConfigManager().getGraveBlacklistedWorlds();
         this.hologramEnabled = plugin.getConfigManager().isHologramEnabled();
@@ -117,7 +123,7 @@ public class GraveManager {
     }
 
     public Optional<Grave> createGrave(Player player, Location deathLocation, List<ItemStack> drops, int droppedExp,
-            String killerName) {
+            String killerName, boolean killedByPlayer) {
         if (isWorldBlacklisted(deathLocation)) {
             return Optional.empty();
         }
@@ -136,12 +142,24 @@ public class GraveManager {
                 .filter(item -> item.getType() != Material.AIR)
                 .map(ItemStack::clone)
                 .toList();
+        if (graveMarkerType == GraveMarkerType.CHEST && storedItems.size() > 54) {
+            List<ItemStack> chestItems = new ArrayList<>(storedItems.subList(0, 54));
+            List<ItemStack> overflowItems = storedItems.subList(54, storedItems.size());
+            Location overflowLocation = block.getLocation().add(0.5D, 0.5D, 0.5D);
+            for (ItemStack overflowItem : overflowItems) {
+                block.getWorld().dropItemNaturally(overflowLocation, overflowItem.clone());
+            }
+            storedItems = chestItems;
+        }
 
         Location markerLocation = block.getLocation();
 
         UUID graveId = UUID.randomUUID();
         long despawnAtMillis = System.currentTimeMillis()
                 + (Math.max(plugin.getConfigManager().getGraveDespawnTime(), 1) * 1000L);
+        boolean publicAccess = GraveAccessPolicy.resolvePublicAccess(
+                plugin.getConfigManager().isPublicPlayerKillAccess(),
+                killedByPlayer);
         Grave grave = new Grave(
                 graveId,
                 player.getUniqueId(),
@@ -151,7 +169,9 @@ public class GraveManager {
                 markerLocation,
                 storedItems,
                 Math.max(droppedExp, 0),
-                despawnAtMillis);
+                despawnAtMillis,
+                graveMarkerType,
+                publicAccess);
 
         gravesById.put(graveId, grave);
         gravesByPlayer.computeIfAbsent(player.getUniqueId(), ignored -> new LinkedHashSet<>()).add(graveId);
@@ -213,7 +233,7 @@ public class GraveManager {
     }
 
     public boolean claimGrave(Player player, Grave grave) {
-        if (!grave.getOwner().equals(player.getUniqueId())) {
+        if (!canAccessGrave(player, grave)) {
             return false;
         }
 
@@ -238,6 +258,10 @@ public class GraveManager {
                 claimAnimationDelayTicks);
 
         return true;
+    }
+
+    public boolean canAccessGrave(Player player, Grave grave) {
+        return grave.getOwner().equals(player.getUniqueId()) || grave.isPublicAccess();
     }
 
     private void playClaimAnimation(Location location) {
@@ -320,6 +344,62 @@ public class GraveManager {
         new HashSet<>(gravesById.keySet()).forEach(this::removeGrave);
     }
 
+    public boolean openGraveChest(Player player, Grave grave) {
+        if (grave.getMarkerType() != GraveMarkerType.CHEST || !canAccessGrave(player, grave)) {
+            return false;
+        }
+
+        Inventory inventory = graveChestInventories.computeIfAbsent(grave.getId(), ignored -> createGraveChestInventory(grave));
+        player.openInventory(inventory);
+        return true;
+    }
+
+    public void syncGraveChestInventory(Player player, UUID graveId, Inventory inventory) {
+        Grave grave = gravesById.get(graveId);
+        if (grave == null || grave.getMarkerType() != GraveMarkerType.CHEST) {
+            return;
+        }
+
+        grave.replaceItemsFromInventory(inventory);
+        if (!grave.isEmpty()) {
+            return;
+        }
+
+        completeEmptyChestGrave(player, grave);
+    }
+
+    private Inventory createGraveChestInventory(Grave grave) {
+        int size = Math.min(54, Math.max(9, ((grave.getItems().size() - 1) / 9 + 1) * 9));
+        GraveChestHolder holder = new GraveChestHolder(grave.getId());
+        Inventory inventory = Bukkit.createInventory(holder, size);
+        holder.setInventory(inventory);
+        for (ItemStack item : grave.getItems()) {
+            if (item != null && item.getType() != Material.AIR) {
+                inventory.addItem(item.clone());
+            }
+        }
+        return inventory;
+    }
+
+    private void completeEmptyChestGrave(Player player, Grave grave) {
+        int rewardExp = Math.max(grave.getExp(), 0);
+        UUID graveId = grave.getId();
+
+        removeGrave(graveId);
+
+        Player owner = Bukkit.getPlayer(grave.getOwner());
+        if (owner != null && owner.isOnline()) {
+            removeLocatorItems(owner, graveId);
+        }
+
+        if (rewardExp > 0) {
+            player.giveExp(rewardExp);
+        }
+
+        player.sendMessage(MessageUtils.getColoredMessage(
+                plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgGraveClaimed()));
+    }
+
     private void giveItems(Player player, List<ItemStack> items) {
         for (ItemStack item : items) {
             if (tryAutoEquip(player, item)) {
@@ -355,11 +435,29 @@ public class GraveManager {
 
         removeHologram(graveId);
         removeEffects(graveId);
+        closeAndRemoveChestInventory(graveId);
 
         Location location = grave.getLocation();
         Block block = location.getBlock();
-        if (block.getType() == graveMarkerMaterial || block.getType() == Material.PLAYER_WALL_HEAD) {
+        Material markerMaterial = grave.getMarkerType().getMaterial();
+        if (block.getType() == markerMaterial
+                || (markerMaterial == Material.PLAYER_HEAD && block.getType() == Material.PLAYER_WALL_HEAD)) {
+            if (block.getState() instanceof Container container) {
+                container.getInventory().clear();
+                container.update(true, false);
+            }
             block.setType(Material.AIR, false);
+        }
+    }
+
+    private void closeAndRemoveChestInventory(UUID graveId) {
+        Inventory inventory = graveChestInventories.remove(graveId);
+        if (inventory == null) {
+            return;
+        }
+
+        for (HumanEntity viewer : new ArrayList<>(inventory.getViewers())) {
+            viewer.closeInventory();
         }
     }
 
@@ -411,6 +509,10 @@ public class GraveManager {
 
     private void createOrUpdateEffects(Grave grave) {
         removeEffects(grave.getId());
+
+        if (!grave.getMarkerType().supportsEffects()) {
+            return;
+        }
 
         if (!effectsEnabled || grave.getLocation().getWorld() == null) {
             return;
@@ -681,7 +783,7 @@ public class GraveManager {
     private boolean placeMarkerBlock(Player player, Block block) {
         block.setType(graveMarkerMaterial, false);
 
-        if (graveMarkerMaterial == Material.PLAYER_HEAD && block.getState() instanceof Skull skull) {
+        if (graveMarkerType == GraveMarkerType.HEAD && block.getState() instanceof Skull skull) {
             skull.setProfile(ResolvableProfile.resolvableProfile(player.getPlayerProfile()));
             skull.update(true, false);
         }
