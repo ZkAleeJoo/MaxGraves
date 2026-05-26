@@ -29,20 +29,20 @@ public final class MaxGraves extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new GraveListener(this), this);
 
         Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage(
-                "&#8A2BE2&lMaxGraves &8» &#8A2BE2   _____      _____  ____  _____________________    _________   _______________ _________"));
+                "&5&lMaxGraves &8» &5   _____      _____  ____  _____________________    _________   _______________ _________"));
         Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage(
-                "&#8A2BE2&lMaxGraves &8» &#8A2BE2  /     \\    /  _  \\ \\   \\/  /  _____/\\______   \\  /  _  \\   \\ /   /\\_   _____//   _____/"));
+                "&5&lMaxGraves &8» &5  /     \\    /  _  \\ \\   \\/  /  _____/\\______   \\  /  _  \\   \\ /   /\\_   _____//   _____/"));
         Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage(
-                "&#8A2BE2&lMaxGraves &8» &#8A2BE2 /  \\ /  \\  /  /_\\  \\ \\     /   \\  ___ |       _/ /  /_\\  \\   Y   /  |    __)_ \\_____  \\ "));
+                "&5&lMaxGraves &8» &5 /  \\ /  \\  /  /_\\  \\ \\     /   \\  ___ |       _/ /  /_\\  \\   Y   /  |    __)_ \\_____  \\ "));
         Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage(
-                "&#8A2BE2&lMaxGraves &8» &#8A2BE2/    Y    \\/    |    \\/     \\    \\_\\  \\|    |   \\/    |    \\     /   |        \\/        \\"));
+                "&5&lMaxGraves &8» &5/    Y    \\/    |    \\/     \\    \\_\\  \\|    |   \\/    |    \\     /   |        \\/        \\"));
         Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage(
-                "&#8A2BE2&lMaxGraves &8» &#8A2BE2\\____|__  /\\____|__  /___/\\  \\______  /|____|_  /\\____|__  /\\___/   /_______  /_______  /"));
+                "&5&lMaxGraves &8» &5\\____|__  /\\____|__  /___/\\  \\______  /|____|_  /\\____|__  /\\___/   /_______  /_______  /"));
         Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage(
-                "&#8A2BE2&lMaxGraves &8» &#8A2BE2        \\/         \\/      \\_/      \\/        \\/         \\/                 \\/        \\/ "));
+                "&5&lMaxGraves &8» &5        \\/         \\/      \\_/      \\/        \\/         \\/                 \\/        \\/ "));
 
         Bukkit.getConsoleSender().sendMessage(MessageUtils
-                .getColoredMessage("&#8A2BE2&lMaxGraves &8» &#8A2BE2The plugin has been enabled! Version: "));
+                .getColoredMessage("&5&lMaxGraves &8» &5The plugin has been enabled! Version: "));
 
         checkUpdates();
     }
@@ -54,7 +54,7 @@ public final class MaxGraves extends JavaPlugin {
         }
 
         Bukkit.getConsoleSender().sendMessage(
-                MessageUtils.getColoredMessage("&#8A2BE2&lMaxGraves &8» &fThe plugin has been disabled! Version: "));
+                MessageUtils.getColoredMessage("&5&lMaxGraves &8» &fThe plugin has been disabled! Version: "));
     }
 
     private void registerCommand(String name, org.bukkit.command.CommandExecutor executor,
@@ -87,11 +87,11 @@ public final class MaxGraves extends JavaPlugin {
 
                 Bukkit.getConsoleSender()
                         .sendMessage(MessageUtils
-                                .getColoredMessage("&#8A2BE2&lMaxGraves &8» &a&lUPDATE AVAILABLE! " + version));
+                                .getColoredMessage("&5&lMaxGraves &8» &a&lUPDATE AVAILABLE! " + version));
                 Bukkit.getConsoleSender().sendMessage(
                         MessageUtils
                                 .getColoredMessage(
-                                        "&#8A2BE2&lMaxGraves &8» &eDownload it now at the following link: &7https://modrinth.com/plugin/maxgraves"));
+                                        "&5&lMaxGraves &8» &eDownload it now at the following link: &7https://modrinth.com/plugin/maxgraves"));
             }
         });
     }
