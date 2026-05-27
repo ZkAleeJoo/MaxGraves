@@ -113,7 +113,8 @@ public class MainConfigManager {
         createOnDeath = config.getBoolean("grave.create-on-death", true);
         graveMarkerType = GraveMarkerType.fromConfig(config.getString("grave.marker.type", "HEAD"));
         String configuredMarkerType = config.getString("grave.marker.type", "HEAD");
-        if (!graveMarkerType.name().equalsIgnoreCase(configuredMarkerType == null ? "HEAD" : configuredMarkerType.trim())) {
+        if (!graveMarkerType.name()
+                .equalsIgnoreCase(configuredMarkerType == null ? "HEAD" : configuredMarkerType.trim())) {
             plugin.getLogger().warning("Invalid marker type for grave.marker.type: "
                     + configuredMarkerType + ". Falling back to HEAD.");
         }
@@ -202,10 +203,10 @@ public class MainConfigManager {
         msgWorldBlacklisted = lang.getString("messages.world-blacklisted",
                 "&cGraves are disabled in this world.");
         msgUpdateAvailable = lang.getString("messages.update-available",
-                "&#00E676&lA new version is available! &#555555(&#FFFFFF{version}&#555555)");
-        msgUpdateCurrent = lang.getString("messages.update-current", "&#AAAAAAYour current version: &#FF5555{version}");
+                "&f&lNEW VERSION: &7{version}");
+        msgUpdateCurrent = lang.getString("messages.update-current", "&7Your current version: &c{version}");
         msgUpdateDownload = lang.getString("messages.update-download",
-                "&#00E676Download it to get improvements and fixes.");
+                "&eDownload it to get improvements and fixes.");
     }
 
     public void reloadConfig() {
