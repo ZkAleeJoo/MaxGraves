@@ -9,9 +9,9 @@
 #Remember not to delete any line of code.
 #For problems, bugs, ideas or suggestions you can do it on the discord server.
 messages:
-  update-available: "&#00E676&lHay una nueva version disponible! &#555555(&#FFFFFF{version}&#555555)"
-  update-current: "&#AAAAAATu version actual: &#FF5555{version}"
-  update-download: "&#00E676Descargala para obtener mejoras y correcciones."
+  update-available: "&f&lNUEVA VERSION: &7{version}"
+  update-current: "&7Tu version actual: &c{version}"
+  update-download: "&eDescargala para recibir mejoras y correcciones."
   no-permission: "&#FF4C4C&l✖ &cNo tienes permisos para usar este comando."
   plugin-reload: "&#4CFFB2&l✔ &aLa configuración y mensajes se han recargado correctamente."
   usage-command: "&#FF9E4C&l⚠ &cUso: &f/maxgraves &7<reload|info>"
