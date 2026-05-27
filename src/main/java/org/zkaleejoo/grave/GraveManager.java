@@ -29,7 +29,6 @@ import org.bukkit.entity.ExperienceOrb;
 
 import java.util.*;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import io.papermc.paper.datacomponent.item.ResolvableProfile;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 
@@ -219,6 +218,7 @@ public class GraveManager {
         return getGravesByPlayer(playerId).stream().findFirst();
     }
 
+    @SuppressWarnings("null")
     public List<Grave> getGravesByPlayer(UUID playerId) {
         Set<UUID> graveIds = gravesByPlayer.get(playerId);
         if (graveIds == null || graveIds.isEmpty()) {
@@ -323,6 +323,7 @@ public class GraveManager {
 
         ItemMeta meta = item.getItemMeta();
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
+        @SuppressWarnings("null")
         String rawId = pdc.get(keys.graveIdKey(), PersistentDataType.STRING);
 
         if (rawId == null) {
@@ -344,12 +345,14 @@ public class GraveManager {
         new HashSet<>(gravesById.keySet()).forEach(this::removeGrave);
     }
 
+    @SuppressWarnings("null")
     public boolean openGraveChest(Player player, Grave grave) {
         if (grave.getMarkerType() != GraveMarkerType.CHEST || !canAccessGrave(player, grave)) {
             return false;
         }
 
-        Inventory inventory = graveChestInventories.computeIfAbsent(grave.getId(), ignored -> createGraveChestInventory(grave));
+        Inventory inventory = graveChestInventories.computeIfAbsent(grave.getId(),
+                ignored -> createGraveChestInventory(grave));
         player.openInventory(inventory);
         return true;
     }
@@ -581,6 +584,7 @@ public class GraveManager {
                     hologramBaseHeight + ((hologramLines.size() - 1 - lineIndex) * hologramLineSpacing),
                     0.0D);
 
+            @SuppressWarnings("null")
             ArmorStand stand = lineLocation.getWorld().spawn(lineLocation, ArmorStand.class, spawned -> {
                 spawned.setInvisible(true);
                 spawned.setInvulnerable(true);
@@ -780,11 +784,12 @@ public class GraveManager {
         return false;
     }
 
+    @SuppressWarnings("deprecation")
     private boolean placeMarkerBlock(Player player, Block block) {
         block.setType(graveMarkerMaterial, false);
 
         if (graveMarkerType == GraveMarkerType.HEAD && block.getState() instanceof Skull skull) {
-            skull.setProfile(ResolvableProfile.resolvableProfile(player.getPlayerProfile()));
+            skull.setOwningPlayer(player);
             skull.update(true, false);
         }
 
@@ -804,17 +809,15 @@ public class GraveManager {
     }
 
     private Particle resolveParticle(String configuredParticle, Particle fallback) {
-        if (configuredParticle == null || configuredParticle.isBlank()) {
-            return fallback;
-        }
-
-        try {
-            return Particle.valueOf(configuredParticle.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException ex) {
+        Particle resolved = ParticleNameResolver.resolve(configuredParticle, fallback);
+        if (!ParticleNameResolver.isKnown(configuredParticle)
+                && configuredParticle != null
+                && !configuredParticle.isBlank()) {
             plugin.getLogger().warning("Invalid particle for grave.effects: " + configuredParticle
                     + ". Falling back to " + fallback + '.');
-            return fallback;
         }
+
+        return resolved;
     }
 
     private Sound resolveSound(String configuredSound, Sound fallback, String configPath) {

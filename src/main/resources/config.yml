@@ -73,9 +73,9 @@ grave:
     enabled: true
     #Particle update speed (5 ticks = 0.25 seconds)
     update-interval-ticks: 5
-    #Primary particle drawn in the spiral around the grave (examples: SOUL, WITCH, SPELL_WITCH)
+    #Primary particle drawn in the spiral around the grave (examples: SOUL, WITCH)
     primary-particle: "SOUL"
-    #Secondary particle used as ambient smoke around the grave (examples: SMOKE, SMOKE_LARGE)
+    #Secondary particle used as ambient smoke around the grave (examples: SMOKE, LARGE_SMOKE)
     secondary-particle: "SMOKE"
     primary-count: 4
     secondary-count: 2

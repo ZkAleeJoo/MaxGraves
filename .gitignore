@@ -7,3 +7,4 @@ docker-compose.yml
 dependency-reduced-pom.xml
 .vscode/
 *.iml
+src/test/

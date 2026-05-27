@@ -146,7 +146,7 @@ public class MainConfigManager {
         effectsEnabled = config.getBoolean("grave.effects.enabled", true);
         effectsUpdateIntervalTicks = Math.max(config.getLong("grave.effects.update-interval-ticks", 5L), 1L);
         effectsPrimaryParticle = config.getString("grave.effects.primary-particle", "SOUL");
-        effectsSecondaryParticle = config.getString("grave.effects.secondary-particle", "SMOKE_NORMAL");
+        effectsSecondaryParticle = config.getString("grave.effects.secondary-particle", "SMOKE");
         effectsPrimaryCount = Math.max(config.getInt("grave.effects.primary-count", 4), 0);
         effectsSecondaryCount = Math.max(config.getInt("grave.effects.secondary-count", 2), 0);
         effectsSpiralRadius = Math.max(config.getDouble("grave.effects.spiral-radius", 0.7D), 0D);

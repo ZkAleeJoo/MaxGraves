@@ -26,10 +26,11 @@ public class CustomConfig {
         this.newFile = newFile;
     }
 
-    public String getPath(){
+    public String getPath() {
         return this.fileName;
     }
 
+    @SuppressWarnings("null")
     public void registerConfig() {
         if (folderName != null) {
             File folder = new File(plugin.getDataFolder(), folderName);
@@ -71,11 +72,14 @@ public class CustomConfig {
     public void updateConfig() {
         try {
             String resourcePath = (folderName != null) ? folderName + "/" + fileName : fileName;
-            try (InputStream resourceStream = plugin.getResource(resourcePath)) {
+            try (@SuppressWarnings("null")
+            InputStream resourceStream = plugin.getResource(resourcePath)) {
 
-                if (resourceStream == null) return;
+                if (resourceStream == null)
+                    return;
 
-                YamlConfiguration jarConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(resourceStream, StandardCharsets.UTF_8));
+                YamlConfiguration jarConfig = YamlConfiguration
+                        .loadConfiguration(new InputStreamReader(resourceStream, StandardCharsets.UTF_8));
 
                 boolean changed = false;
                 for (String key : jarConfig.getKeys(true)) {
@@ -110,7 +114,7 @@ public class CustomConfig {
     }
 
     public boolean reloadConfig() {
-        if(folderName != null){
+        if (folderName != null) {
             file = new File(plugin.getDataFolder() + File.separator + folderName, fileName);
         } else {
             file = new File(plugin.getDataFolder(), fileName);
@@ -122,10 +126,12 @@ public class CustomConfig {
         }
 
         String resourcePath = (folderName != null) ? folderName + "/" + fileName : fileName;
-        try (InputStream resourceStream = plugin.getResource(resourcePath)) {
+        try (@SuppressWarnings("null")
+        InputStream resourceStream = plugin.getResource(resourcePath)) {
 
             if (resourceStream != null) {
-                YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(resourceStream, StandardCharsets.UTF_8));
+                YamlConfiguration defConfig = YamlConfiguration
+                        .loadConfiguration(new InputStreamReader(resourceStream, StandardCharsets.UTF_8));
                 fileConfiguration.setDefaults(defConfig);
             }
         } catch (IOException e) {

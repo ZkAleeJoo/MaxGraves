@@ -37,29 +37,34 @@ public class MainCommand implements CommandExecutor, TabCompleter {
     public boolean onCommand(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
             if (!sender.hasPermission(ADMIN_PERMISSION)) {
-                sender.sendMessage(MessageUtils.getColoredMessage(plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgNoPermission()));
+                sender.sendMessage(MessageUtils.getColoredMessage(
+                        plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgNoPermission()));
                 return true;
             }
 
             plugin.reloadPluginState();
-            sender.sendMessage(MessageUtils.getColoredMessage(plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgPluginReload()));
+            sender.sendMessage(MessageUtils.getColoredMessage(
+                    plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgPluginReload()));
             return true;
         }
 
         if (args.length > 0 && args[0].equalsIgnoreCase("info")) {
             if (!sender.hasPermission(INFO_PERMISSION)) {
-                sender.sendMessage(MessageUtils.getColoredMessage(plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgNoPermission()));
+                sender.sendMessage(MessageUtils.getColoredMessage(
+                        plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgNoPermission()));
                 return true;
             }
 
             if (!(sender instanceof Player player)) {
-                sender.sendMessage(MessageUtils.getColoredMessage(plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgOnlyPlayersCommand()));
+                sender.sendMessage(MessageUtils.getColoredMessage(
+                        plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgOnlyPlayersCommand()));
                 return true;
             }
 
             List<Grave> graves = plugin.getGraveManager().getGravesByPlayer(player.getUniqueId());
             if (graves.isEmpty()) {
-                player.sendMessage(MessageUtils.getColoredMessage(plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgInfoNoGrave()));
+                player.sendMessage(MessageUtils.getColoredMessage(
+                        plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgInfoNoGrave()));
                 return true;
             }
 
@@ -67,7 +72,8 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        sender.sendMessage(MessageUtils.getColoredMessage(plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgUsageCommand()));
+        sender.sendMessage(MessageUtils.getColoredMessage(
+                plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgUsageCommand()));
         return true;
     }
 
@@ -88,6 +94,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         return completions;
     }
 
+    @SuppressWarnings("null")
     private void openInfoMenu(Player player, List<Grave> graves) {
         int size = Math.min(54, ((graves.size() - 1) / 9 + 1) * 9);
         String menuTitle = MessageUtils.getColoredMessage(plugin.getConfigManager().getMsgInfoMenuTitle());

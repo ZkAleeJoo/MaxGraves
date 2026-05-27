@@ -79,6 +79,7 @@ public final class MaxGraves extends JavaPlugin {
                 MessageUtils.getColoredMessage("&5&lMaxGraves &8» &fThe plugin has been disabled! Version: "));
     }
 
+    @SuppressWarnings("null")
     private void registerCommand(String name, org.bukkit.command.CommandExecutor executor,
             org.bukkit.command.TabCompleter tabCompleter) {
         org.bukkit.command.PluginCommand command = getCommand(name);
