@@ -2,8 +2,6 @@
 
 MaxGraves is a lightweight graves plugin for modern Minecraft servers. When a player dies, the plugin can store their items and experience in a temporary grave at or near the death location, give the player a locator map after respawn, and let them recover their contents safely.
 
-![MaxGraves banner](MaxGraves.png)
-
 ## Features
 
 - Creates a grave when a player dies and stores their dropped items and experience.
