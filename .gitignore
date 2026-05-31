@@ -1,10 +1,6 @@
-.idea/
-.mvn/
-server-plugins/
-server-data/
-target/
-docker-compose.yml
-dependency-reduced-pom.xml
 .vscode/
-*.iml
+target/
+pom.xml
 src/test/
+.github/
+src/main/resources/plugin.yml
