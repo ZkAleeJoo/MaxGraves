@@ -8,7 +8,7 @@ MaxGraves is a lightweight graves plugin for modern Minecraft servers. When a pl
 - Prevents the original death drops and dropped experience from duplicating after a grave is created.
 - Gives the owner a locator map after respawn for every active grave that does not already have a locator in the player's inventory.
 - Lets players right click their locator map to teleport to the linked grave when they have permission.
-- Supports multiple active graves per player, sorted by remaining lifetime in the info menu.
+- Supports multiple active graves per player by default, with an optional single-active-grave limit.
 - Opens a GUI with the player's active graves through `/maxgraves info`.
 - Shows each grave's world, coordinates, remaining time, and internal grave ID in the info menu.
 - Automatically equips recovered armor and off-hand items when the matching equipment slot is empty.
@@ -116,6 +116,7 @@ Main settings live in `plugins/MaxGraves/config.yml`.
 | `grave.search-max-radius` | `6` | Maximum horizontal radius used to find a safe grave location. |
 | `grave.debug-death-events` | `false` | Logs detailed death-event traces for troubleshooting. |
 | `grave.create-on-death` | `true` | Enables or disables automatic grave creation on death. |
+| `grave.limit.single-active` | `false` | If enabled, players can only have one active grave at a time. New deaths will not create another grave until the previous one is claimed or expires. |
 | `grave.marker.type` | `HEAD` | Grave marker mode. Available values: `HEAD`, `CHEST`. |
 | `grave.access.public-player-kill` | `false` | Allows public access to graves created by player kills. |
 | `grave.info-menu.item.material` | `PAPER` | Material used for each entry in the info menu. |
