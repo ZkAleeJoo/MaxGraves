@@ -249,11 +249,11 @@ public class InfoMenuManager {
             return item;
         }
 
-        meta.displayName(MessageUtils.getColoredComponent(
+        meta.displayName(MessageUtils.getColoredItemComponent(
                 replaceGravePlaceholders(config.getMsgInfoMenuItemName(), grave, index, page, pages, graveCount)));
         meta.lore(config.getMsgInfoMenuLore().stream()
                 .map(line -> replaceGravePlaceholders(line, grave, index, page, pages, graveCount))
-                .map(MessageUtils::getColoredComponent)
+                .map(MessageUtils::getColoredItemComponent)
                 .toList());
         item.setItemMeta(meta);
         return item;
@@ -267,12 +267,12 @@ public class InfoMenuManager {
             return item;
         }
 
-        meta.displayName(MessageUtils.getColoredComponent(
+        meta.displayName(MessageUtils.getColoredItemComponent(
                 replaceGravePlaceholders(config.getMsgInfoDetailsSummaryName(), grave, index, page, pages,
                         graveCount)));
         meta.lore(config.getMsgInfoDetailsSummaryLore().stream()
                 .map(line -> replaceGravePlaceholders(line, grave, index, page, pages, graveCount))
-                .map(MessageUtils::getColoredComponent)
+                .map(MessageUtils::getColoredItemComponent)
                 .toList());
         item.setItemMeta(meta);
         return item;
@@ -286,11 +286,11 @@ public class InfoMenuManager {
             return item;
         }
 
-        meta.displayName(MessageUtils.getColoredComponent(replaceButtonPlaceholders(button.name(), grave, index, page,
-                pages, graveCount)));
+        meta.displayName(MessageUtils.getColoredItemComponent(
+                replaceButtonPlaceholders(button.name(), grave, index, page, pages, graveCount)));
         meta.lore(button.lore().stream()
                 .map(line -> replaceButtonPlaceholders(line, grave, index, page, pages, graveCount))
-                .map(MessageUtils::getColoredComponent)
+                .map(MessageUtils::getColoredItemComponent)
                 .toList());
         item.setItemMeta(meta);
         return item;
