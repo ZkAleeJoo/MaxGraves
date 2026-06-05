@@ -9,8 +9,9 @@ MaxGraves is a lightweight graves plugin for modern Minecraft servers. When a pl
 - Gives the owner a locator map after respawn for every active grave that does not already have a locator in the player's inventory.
 - Lets players right click their locator map to teleport to the linked grave when they have permission.
 - Supports multiple active graves per player by default, with an optional single-active-grave limit.
-- Opens a GUI with the player's active graves through `/maxgraves info`.
-- Shows each grave's world, coordinates, remaining time, and internal grave ID in the info menu.
+- Opens a configurable GUI with the player's active graves through `/maxgraves info`.
+- Lets players teleport, refresh locator maps, and view detailed grave information from the info menu.
+- Keeps grave claiming physical; graves are still claimed by going to the grave marker instead of clicking a GUI claim button.
 - Automatically equips recovered armor and off-hand items when the matching equipment slot is empty.
 - Drops recovered overflow items at the player when their inventory is full.
 - Stores and returns experience when the grave is claimed.
@@ -119,7 +120,19 @@ Main settings live in `plugins/MaxGraves/config.yml`.
 | `grave.limit.single-active` | `false` | If enabled, players can only have one active grave at a time. New deaths will not create another grave until the previous one is claimed or expires. |
 | `grave.marker.type` | `HEAD` | Grave marker mode. Available values: `HEAD`, `CHEST`. |
 | `grave.access.public-player-kill` | `false` | Allows public access to graves created by player kills. |
-| `grave.info-menu.item.material` | `PAPER` | Material used for each entry in the info menu. |
+| `grave.info-menu.size` | `54` | Inventory size used by the `/maxgraves info` menu. Values are normalized to valid inventory row sizes. |
+| `grave.info-menu.grave-slots` | Configured list | Slots used for grave entries in the main menu. Invalid or duplicate slots are ignored. |
+| `grave.info-menu.expiring-threshold-seconds` | `300` | Remaining seconds at which a grave entry switches to the expiring material. |
+| `grave.info-menu.details.summary-slot` | `13` | Slot used by the summary item in the detail menu. |
+| `grave.info-menu.sounds.enabled` | `true` | Enables menu click sounds. |
+| `grave.info-menu.sounds.click.type` | `UI_BUTTON_CLICK` | Sound played when clicking menu buttons. |
+| `grave.info-menu.filler.*` | Configured item | Decorative filler item used behind menu entries and buttons. |
+| `grave.info-menu.item.material` | `PAPER` | Fallback material used for grave entries and detail summaries. |
+| `grave.info-menu.item.head-material` | `PLAYER_HEAD` | Material used for private head graves. |
+| `grave.info-menu.item.chest-material` | `CHEST` | Material used for private chest graves. |
+| `grave.info-menu.item.public-material` | `ENDER_EYE` | Material used for public graves. |
+| `grave.info-menu.item.expiring-material` | `CLOCK` | Material used for graves close to expiration. |
+| `grave.info-menu.buttons.*` | Configured items | Configures previous, next, refresh, close, back, teleport, locator, and details controls. |
 | `grave.hologram.enabled` | `true` | Enables grave holograms. |
 | `grave.hologram.update-interval-ticks` | `20` | How often hologram text refreshes. |
 | `grave.hologram.base-height` | `0.3` | Height offset from the marker to the first hologram line. |
@@ -161,16 +174,34 @@ The following placeholders can be used in `grave.hologram.lines`:
 
 ## Info Menu Placeholders
 
-The following placeholders can be used in `messages.info-menu-item-name` and `messages.info-menu-item-lore`:
+The info menu supports a main grave list and a per-grave detail view. Main grave items support these clicks:
+
+| Click | Action |
+| --- | --- |
+| Left click | Teleports the owner to the grave when they have `maxgrave.tp`. |
+| Right click | Removes any old locator for that grave and gives the owner a fresh locator map. |
+| Shift click | Opens the detail menu for that grave. |
+
+The menu also supports configurable previous page, next page, refresh, close, back, teleport, and locator buttons.
+
+The following placeholders can be used in info menu titles, grave items, detail summaries, and button text:
 
 | Placeholder | Description |
 | --- | --- |
 | `{index}` | Grave number in the menu. |
+| `{page}` | Current menu page, starting at 1. |
+| `{pages}` | Total page count. |
+| `{graves}` | Total active graves owned by the viewer. |
 | `{world}` | Grave world name. |
 | `{x}` | Grave X coordinate. |
 | `{y}` | Grave Y coordinate. |
 | `{z}` | Grave Z coordinate. |
 | `{time_left}` | Remaining time before the grave expires. |
+| `{items}` | Number of stored item stacks. |
+| `{exp}` | Stored experience amount. |
+| `{killer}` | Killer name or configured unknown-killer text. |
+| `{type}` | Grave marker type. |
+| `{access}` | Configured public/private access label. |
 | `{id}` | Internal grave UUID. |
 
 ## Messages
@@ -191,7 +222,7 @@ The plugin supports legacy color codes and hex colors in messages.
 - `/maxgraves reload` reloads settings without disabling the plugin.
 - Existing config and language files are automatically updated with missing bundled keys.
 - Invalid marker types fall back to `HEAD`.
-- Invalid info menu materials fall back to `PAPER`.
+- Invalid info menu materials, slots, and sounds fall back to safe defaults.
 - Invalid particles or sounds fall back to safe defaults and log a warning.
 
 ## Support
