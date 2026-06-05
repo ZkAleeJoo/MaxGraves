@@ -51,7 +51,7 @@ public class InfoMenuManager {
         InfoMenuHolder holder = new InfoMenuHolder(player.getUniqueId(), InfoMenuHolder.ViewType.MAIN, page, null);
         Inventory inventory = Bukkit.createInventory(holder, layout.size(), MessageUtils.getColoredComponent(title));
 
-        applyFiller(inventory);
+        applyFiller(inventory, layout);
         List<Integer> itemIndexes = layout.itemIndexesForPage(page, graves.size());
         for (int slotIndex = 0; slotIndex < itemIndexes.size(); slotIndex++) {
             int graveIndex = itemIndexes.get(slotIndex);
@@ -94,7 +94,7 @@ public class InfoMenuManager {
                 graveId);
         Inventory inventory = Bukkit.createInventory(holder, layout.size(), MessageUtils.getColoredComponent(title));
 
-        applyFiller(inventory);
+        applyFiller(inventory, layout);
         int summarySlot = config.getInfoMenuDetailsSummarySlot();
         if (summarySlot >= 0 && summarySlot < inventory.getSize()) {
             inventory.setItem(summarySlot, buildDetailsSummaryItem(grave, index, page, pages, graves.size()));
@@ -296,14 +296,16 @@ public class InfoMenuManager {
         return item;
     }
 
-    private void applyFiller(Inventory inventory) {
-        InfoMenuButton filler = plugin.getConfigManager().getInfoMenuFillerItem();
+    private void applyFiller(Inventory inventory, InfoMenuLayout layout) {
+        MainConfigManager config = plugin.getConfigManager();
+        InfoMenuButton filler = config.getInfoMenuFillerItem();
         if (!filler.enabled() || filler.material() == Material.AIR) {
             return;
         }
 
         ItemStack fillerItem = buildConfiguredButton(filler, null, 0, 0, 1, 0);
-        for (int slot = 0; slot < inventory.getSize(); slot++) {
+        for (int slot : InfoMenuDecorationPolicy.fillerSlots(inventory.getSize(), layout.graveSlots(),
+                config.isInfoMenuFillerFillGraveSlots())) {
             inventory.setItem(slot, fillerItem);
         }
     }
