@@ -29,6 +29,12 @@ grave:
   #Enables detailed console traces for PlayerDeathEvent processing and final drops/exp state
   debug-death-events: false
   create-on-death: true
+  teleport:
+    #Seconds a player must wait after PvP combat before teleporting to a grave (0 = disabled)
+    cooldown-seconds: 15
+  locator-map:
+    #If false, grave maps are not given and cannot teleport players. Use /mg info instead.
+    enabled: true
   limit:
     #If true, a player can only have one active grave at a time.
     #When the player already has an active grave, new deaths will not create another grave.

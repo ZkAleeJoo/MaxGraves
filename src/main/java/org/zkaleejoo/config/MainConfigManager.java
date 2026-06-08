@@ -28,6 +28,8 @@ public class MainConfigManager {
     private boolean bStatsEnabled;
     private int graveDespawnTime;
     private boolean createOnDeath;
+    private int graveTeleportCooldownSeconds;
+    private boolean locatorMapEnabled;
     private boolean singleActiveGraveLimit;
     private boolean hologramEnabled;
     private long hologramUpdateIntervalTicks;
@@ -85,6 +87,8 @@ public class MainConfigManager {
     private String msgOnlyOwnerCanClaim;
     private String msgOnlyOwnerCanUseMap;
     private String msgLocatorUsed;
+    private String msgTeleportCooldown;
+    private String msgLocatorDisabled;
     private String msgGraveNotFound;
     private String msgGraveExpired;
     private String msgGraveCreateFail;
@@ -141,6 +145,8 @@ public class MainConfigManager {
         graveSearchMaxRadius = Math.max(config.getInt("grave.search-max-radius", 6), 1);
         debugDeathEvents = config.getBoolean("grave.debug-death-events", false);
         createOnDeath = config.getBoolean("grave.create-on-death", true);
+        graveTeleportCooldownSeconds = Math.max(config.getInt("grave.teleport.cooldown-seconds", 15), 0);
+        locatorMapEnabled = config.getBoolean("grave.locator-map.enabled", true);
         singleActiveGraveLimit = config.getBoolean("grave.limit.single-active", false);
         graveMarkerType = GraveMarkerType.fromConfig(config.getString("grave.marker.type", "HEAD"));
         String configuredMarkerType = config.getString("grave.marker.type", "HEAD");
@@ -230,6 +236,10 @@ public class MainConfigManager {
                 "&cOnly the owner can claim this grave.");
         msgOnlyOwnerCanUseMap = lang.getString("messages.only-owner-can-use-map", "&cThis map does not belong to you.");
         msgLocatorUsed = lang.getString("messages.locator-used", "&aTeleported to your grave.");
+        msgTeleportCooldown = lang.getString("messages.teleport-cooldown",
+                "&cYou cannot teleport to your grave for another {seconds}s after PvP combat.");
+        msgLocatorDisabled = lang.getString("messages.locator-disabled",
+                "&cLocator maps are disabled. Use /mg info to teleport to your grave.");
         msgGraveNotFound = lang.getString("messages.grave-not-found", "&cYour grave could not be found.");
         msgGraveExpired = lang.getString("messages.grave-expired",
                 "&cYour grave has expired and its contents were lost.");
@@ -383,6 +393,14 @@ public class MainConfigManager {
         return createOnDeath;
     }
 
+    public int getGraveTeleportCooldownSeconds() {
+        return graveTeleportCooldownSeconds;
+    }
+
+    public boolean isLocatorMapEnabled() {
+        return locatorMapEnabled;
+    }
+
     public boolean isSingleActiveGraveLimit() {
         return singleActiveGraveLimit;
     }
@@ -505,6 +523,14 @@ public class MainConfigManager {
 
     public String getMsgLocatorUsed() {
         return msgLocatorUsed;
+    }
+
+    public String getMsgTeleportCooldown() {
+        return msgTeleportCooldown;
+    }
+
+    public String getMsgLocatorDisabled() {
+        return msgLocatorDisabled;
     }
 
     public String getMsgGraveNotFound() {

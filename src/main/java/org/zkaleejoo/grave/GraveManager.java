@@ -45,6 +45,7 @@ public class GraveManager {
     private final Map<UUID, BukkitTask> particleTasks = new HashMap<>();
     private final Map<UUID, Inventory> graveChestInventories = new HashMap<>();
     private final GraveTeleportFeedbackGate teleportFeedbackGate = new GraveTeleportFeedbackGate(750L);
+    private GraveTeleportCooldown teleportCooldown;
     private GraveMarkerType graveMarkerType;
     private Material graveMarkerMaterial;
     private int graveSearchMaxRadius;
@@ -82,6 +83,8 @@ public class GraveManager {
 
     public void reloadSettings() {
         this.graveMarkerType = plugin.getConfigManager().getGraveMarkerType();
+        this.teleportCooldown = new GraveTeleportCooldown(
+                plugin.getConfigManager().getGraveTeleportCooldownSeconds() * 1000L);
         this.graveMarkerMaterial = graveMarkerType.getMaterial();
         this.graveSearchMaxRadius = Math.max(plugin.getConfigManager().getGraveSearchMaxRadius(), 1);
         this.blacklistedWorlds = plugin.getConfigManager().getGraveBlacklistedWorlds();
@@ -186,6 +189,10 @@ public class GraveManager {
     }
 
     public int giveLocatorsForPlayer(Player player) {
+        if (!plugin.getConfigManager().isLocatorMapEnabled()) {
+            return 0;
+        }
+
         Set<UUID> existingLocatorTargets = new HashSet<>();
         for (ItemStack item : player.getInventory().getContents()) {
             getLocatorTarget(item).ifPresent(existingLocatorTargets::add);
@@ -285,13 +292,27 @@ public class GraveManager {
     }
 
     public boolean giveLocatorForGrave(Player player, Grave grave) {
-        if (!grave.getOwner().equals(player.getUniqueId())) {
+        if (!plugin.getConfigManager().isLocatorMapEnabled() || !grave.getOwner().equals(player.getUniqueId())) {
             return false;
         }
 
         removeLocatorItems(player, grave.getId());
         giveLocatorMap(player, grave);
         return true;
+    }
+
+    public void recordPvPCombat(Player firstPlayer, Player secondPlayer) {
+        long nowMillis = System.currentTimeMillis();
+        teleportCooldown.recordCombat(firstPlayer.getUniqueId(), nowMillis);
+        teleportCooldown.recordCombat(secondPlayer.getUniqueId(), nowMillis);
+    }
+
+    public boolean isTeleportCooldownActive(Player player) {
+        return !teleportCooldown.canTeleport(player.getUniqueId(), System.currentTimeMillis());
+    }
+
+    public long getTeleportCooldownRemainingSeconds(Player player) {
+        return teleportCooldown.remainingSeconds(player.getUniqueId(), System.currentTimeMillis());
     }
 
     private void playClaimAnimation(Location location) {
@@ -374,6 +395,9 @@ public class GraveManager {
     public void clearAll() {
         new HashSet<>(gravesById.keySet()).forEach(this::removeGrave);
         teleportFeedbackGate.clear();
+        if (teleportCooldown != null) {
+            teleportCooldown.clear();
+        }
     }
 
     @SuppressWarnings("null")

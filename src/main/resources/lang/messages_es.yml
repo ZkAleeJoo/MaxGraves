@@ -21,6 +21,8 @@ messages:
   only-owner-can-claim: "&#FF4C4C&l✖ &cSolo el dueño puede reclamar esta tumba."
   only-owner-can-use-map: "&#FF4C4C&l✖ &cEste mapa no te pertenece."
   locator-used: "&#4CA6FF&l➤ &aHas sido teletransportado a tu tumba."
+  teleport-cooldown: "&#FF4C4C&l✖ &cNo puedes teletransportarte a tu tumba durante &f{seconds}s &cdespues de combate PvP."
+  locator-disabled: "&#FF4C4C&l✖ &cLos mapas localizadores estan desactivados. Usa &f/mg info &cpara teletransportarte."
   grave-not-found: "&#FF4C4C&l✖ &cNo se encontró la tumba vinculada a este mapa."
   grave-expired: "&#FF4C4C&l✖ &cTu tumba expiró y sus objetos se perdieron."
   grave-create-fail: "&#FF4C4C&l✖ &cNo se pudo crear una tumba en el lugar de tu muerte."

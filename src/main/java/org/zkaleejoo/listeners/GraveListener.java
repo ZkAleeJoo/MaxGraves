@@ -1,6 +1,5 @@
 package org.zkaleejoo.listeners;
 
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.Container;
@@ -296,6 +295,37 @@ public class GraveListener implements Listener {
         }
 
         return false;
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
+    public void onPlayerPvPCombat(EntityDamageByEntityEvent event) {
+        if (!(event.getEntity() instanceof Player victim)) {
+            return;
+        }
+
+        Player attacker = resolveAttackingPlayer(event);
+        if (attacker == null || attacker.getUniqueId().equals(victim.getUniqueId())) {
+            return;
+        }
+
+        plugin.getGraveManager().recordPvPCombat(victim, attacker);
+    }
+
+    private Player resolveAttackingPlayer(EntityDamageByEntityEvent event) {
+        Entity damager = event.getDamager();
+        if (damager instanceof Player player) {
+            return player;
+        }
+
+        if (damager instanceof Projectile projectile && projectile.getShooter() instanceof Player player) {
+            return player;
+        }
+
+        if (damager instanceof Tameable tameable && tameable.getOwner() instanceof Player player) {
+            return player;
+        }
+
+        return null;
     }
 
     private String getEntityDisplayName(Entity entity) {
@@ -619,6 +649,12 @@ public class GraveListener implements Listener {
         event.setUseItemInHand(Event.Result.DENY);
 
         Player player = event.getPlayer();
+        if (!plugin.getConfigManager().isLocatorMapEnabled()) {
+            player.sendMessage(MessageUtils.getColoredMessage(
+                    plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgLocatorDisabled()));
+            return;
+        }
+
         if (!player.hasPermission(TELEPORT_PERMISSION)) {
             player.sendMessage(MessageUtils.getColoredMessage(
                     plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgNoPermission()));
@@ -639,10 +675,25 @@ public class GraveListener implements Listener {
             return;
         }
 
-        Location destination = grave.getLocation().clone().add(0.5, 1, 0.5);
-        player.teleport(destination);
-        player.sendMessage(MessageUtils.getColoredMessage(
-                plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgLocatorUsed()));
+        if (sendTeleportCooldownMessage(player)) {
+            return;
+        }
+
+        if (!plugin.getGraveManager().teleportOwnerToGrave(player, grave)) {
+            player.sendMessage(MessageUtils.getColoredMessage(
+                    plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgGraveNotFound()));
+        }
+    }
+
+    private boolean sendTeleportCooldownMessage(Player player) {
+        if (!plugin.getGraveManager().isTeleportCooldownActive(player)) {
+            return false;
+        }
+
+        String message = plugin.getConfigManager().getMsgTeleportCooldown()
+                .replace("{seconds}", String.valueOf(plugin.getGraveManager().getTeleportCooldownRemainingSeconds(player)));
+        player.sendMessage(MessageUtils.getColoredMessage(plugin.getConfigManager().getPrefix() + message));
+        return true;
     }
 
     private boolean isGraveMarker(Block block) {

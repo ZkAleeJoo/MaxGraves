@@ -105,7 +105,8 @@ public class InfoMenuManager {
         addDetailsButton(inventory, holder, "teleport", InfoMenuAction.TELEPORT,
                 config.getInfoMenuButton("teleport").enabled(), grave, index, page, pages, graves.size());
         addDetailsButton(inventory, holder, "locator", InfoMenuAction.LOCATOR,
-                config.getInfoMenuButton("locator").enabled(), grave, index, page, pages, graves.size());
+                config.isLocatorMapEnabled() && config.getInfoMenuButton("locator").enabled(), grave, index, page,
+                pages, graves.size());
         addDetailsButton(inventory, holder, "refresh", InfoMenuAction.REFRESH, true, grave, index, page, pages,
                 graves.size());
         addDetailsButton(inventory, holder, "close", InfoMenuAction.CLOSE, true, grave, index, page, pages,
@@ -145,7 +146,8 @@ public class InfoMenuManager {
         }
 
         if (clickType.isRightClick()) {
-            if (plugin.getConfigManager().getInfoMenuButton("locator").enabled()) {
+            if (plugin.getConfigManager().isLocatorMapEnabled()
+                    && plugin.getConfigManager().getInfoMenuButton("locator").enabled()) {
                 handleLocator(player, holder, graveIdOptional.get());
             }
             return;
@@ -180,6 +182,10 @@ public class InfoMenuManager {
             return;
         }
 
+        if (sendTeleportCooldownMessage(player)) {
+            return;
+        }
+
         boolean teleported = plugin.getGraveManager().teleportOwnerToGrave(player, graveOptional.get());
         if (!teleported) {
             player.sendMessage(MessageUtils.getColoredMessage(
@@ -191,6 +197,12 @@ public class InfoMenuManager {
     }
 
     private void handleLocator(Player player, InfoMenuHolder holder, UUID graveId) {
+        if (!plugin.getConfigManager().isLocatorMapEnabled()) {
+            player.sendMessage(MessageUtils.getColoredMessage(
+                    plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgLocatorDisabled()));
+            return;
+        }
+
         Optional<Grave> graveOptional = getOwnedActiveGrave(player, holder, graveId);
         if (graveOptional.isEmpty()) {
             return;
@@ -200,6 +212,17 @@ public class InfoMenuManager {
             player.sendMessage(MessageUtils.getColoredMessage(
                     plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgInfoLocatorReceived()));
         }
+    }
+
+    private boolean sendTeleportCooldownMessage(Player player) {
+        if (!plugin.getGraveManager().isTeleportCooldownActive(player)) {
+            return false;
+        }
+
+        String message = plugin.getConfigManager().getMsgTeleportCooldown()
+                .replace("{seconds}", String.valueOf(plugin.getGraveManager().getTeleportCooldownRemainingSeconds(player)));
+        player.sendMessage(MessageUtils.getColoredMessage(plugin.getConfigManager().getPrefix() + message));
+        return true;
     }
 
     private Optional<Grave> getOwnedActiveGrave(Player player, InfoMenuHolder holder, UUID graveId) {
