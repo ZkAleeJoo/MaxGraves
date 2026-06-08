@@ -15,6 +15,8 @@ import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
@@ -25,6 +27,7 @@ import org.zkaleejoo.grave.Grave;
 import org.zkaleejoo.grave.GraveChestHolder;
 import org.zkaleejoo.grave.GraveCreationPolicy;
 import org.zkaleejoo.grave.GraveMarkerType;
+import org.zkaleejoo.grave.GraveTeleportResult;
 import org.zkaleejoo.utils.MessageUtils;
 import java.util.Optional;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -297,37 +300,6 @@ public class GraveListener implements Listener {
         return false;
     }
 
-    @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
-    public void onPlayerPvPCombat(EntityDamageByEntityEvent event) {
-        if (!(event.getEntity() instanceof Player victim)) {
-            return;
-        }
-
-        Player attacker = resolveAttackingPlayer(event);
-        if (attacker == null || attacker.getUniqueId().equals(victim.getUniqueId())) {
-            return;
-        }
-
-        plugin.getGraveManager().recordPvPCombat(victim, attacker);
-    }
-
-    private Player resolveAttackingPlayer(EntityDamageByEntityEvent event) {
-        Entity damager = event.getDamager();
-        if (damager instanceof Player player) {
-            return player;
-        }
-
-        if (damager instanceof Projectile projectile && projectile.getShooter() instanceof Player player) {
-            return player;
-        }
-
-        if (damager instanceof Tameable tameable && tameable.getOwner() instanceof Player player) {
-            return player;
-        }
-
-        return null;
-    }
-
     private String getEntityDisplayName(Entity entity) {
         if (entity instanceof Player killerPlayer) {
             return killerPlayer.getName();
@@ -567,6 +539,26 @@ public class GraveListener implements Listener {
         event.setCancelled(true);
     }
 
+    @EventHandler(ignoreCancelled = true)
+    public void onPlayerMove(PlayerMoveEvent event) {
+        plugin.getGraveManager().cancelPendingTeleportForMove(
+                event.getPlayer(),
+                event.getFrom(),
+                event.getTo());
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPlayerDamage(EntityDamageEvent event) {
+        if (event.getEntity() instanceof Player player) {
+            plugin.getGraveManager().cancelPendingTeleportForDamage(player);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        plugin.getGraveManager().cancelPendingTeleport(event.getPlayer(), false);
+    }
+
 
     private boolean isInfoMenu(InventoryClickEvent event) {
         return event.getView().getTopInventory().getHolder(false) instanceof InfoMenuHolder;
@@ -675,25 +667,30 @@ public class GraveListener implements Listener {
             return;
         }
 
-        if (sendTeleportCooldownMessage(player)) {
-            return;
-        }
-
-        if (!plugin.getGraveManager().teleportOwnerToGrave(player, grave)) {
-            player.sendMessage(MessageUtils.getColoredMessage(
-                    plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgGraveNotFound()));
-        }
+        handleTeleportResult(player, plugin.getGraveManager().requestOwnerTeleportToGrave(player, grave), grave);
     }
 
-    private boolean sendTeleportCooldownMessage(Player player) {
-        if (!plugin.getGraveManager().isTeleportCooldownActive(player)) {
-            return false;
+    private void handleTeleportResult(Player player, GraveTeleportResult result, Grave grave) {
+        switch (result) {
+            case TELEPORTED -> {
+            }
+            case WARMUP_STARTED -> {
+                String message = plugin.getConfigManager().getMsgTeleportWarmupStarted()
+                        .replace("{seconds}", String.valueOf(plugin.getGraveManager().getTeleportWarmupSeconds()));
+                player.sendMessage(MessageUtils.getColoredMessage(plugin.getConfigManager().getPrefix() + message));
+            }
+            case ALREADY_PENDING -> player.sendMessage(MessageUtils.getColoredMessage(
+                    plugin.getConfigManager().getPrefix()
+                            + plugin.getConfigManager().getMsgTeleportWarmupAlreadyPending()));
+            case COOLDOWN_ACTIVE -> {
+                String message = plugin.getConfigManager().getMsgTeleportCooldown()
+                        .replace("{seconds}",
+                                String.valueOf(plugin.getGraveManager().getTeleportCooldownRemainingSeconds(grave)));
+                player.sendMessage(MessageUtils.getColoredMessage(plugin.getConfigManager().getPrefix() + message));
+            }
+            case UNAVAILABLE -> player.sendMessage(MessageUtils.getColoredMessage(
+                    plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgGraveNotFound()));
         }
-
-        String message = plugin.getConfigManager().getMsgTeleportCooldown()
-                .replace("{seconds}", String.valueOf(plugin.getGraveManager().getTeleportCooldownRemainingSeconds(player)));
-        player.sendMessage(MessageUtils.getColoredMessage(plugin.getConfigManager().getPrefix() + message));
-        return true;
     }
 
     private boolean isGraveMarker(Block block) {

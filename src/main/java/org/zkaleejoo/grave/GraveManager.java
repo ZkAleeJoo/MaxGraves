@@ -44,6 +44,7 @@ public class GraveManager {
     private final Map<UUID, BukkitTask> hologramTasks = new HashMap<>();
     private final Map<UUID, BukkitTask> particleTasks = new HashMap<>();
     private final Map<UUID, Inventory> graveChestInventories = new HashMap<>();
+    private final Map<UUID, PendingGraveTeleport> pendingTeleportsByPlayer = new HashMap<>();
     private final GraveTeleportFeedbackGate teleportFeedbackGate = new GraveTeleportFeedbackGate(750L);
     private GraveTeleportCooldown teleportCooldown;
     private GraveMarkerType graveMarkerType;
@@ -73,6 +74,9 @@ public class GraveManager {
     private Sound claimAnimationSound;
     private float claimAnimationSoundVolume;
     private float claimAnimationSoundPitch;
+    private long teleportWarmupTicks;
+    private boolean teleportCancelOnMove;
+    private boolean teleportCancelOnDamage;
     private Set<String> blacklistedWorlds;
 
     public GraveManager(MaxGraves plugin) {
@@ -120,6 +124,10 @@ public class GraveManager {
                 "grave.claim-animation.sound.type");
         this.claimAnimationSoundVolume = plugin.getConfigManager().getClaimAnimationSoundVolume();
         this.claimAnimationSoundPitch = plugin.getConfigManager().getClaimAnimationSoundPitch();
+        this.teleportWarmupTicks = plugin.getConfigManager().getGraveTeleportWarmupSeconds() * 20L;
+        this.teleportCancelOnMove = plugin.getConfigManager().isGraveTeleportCancelOnMove();
+        this.teleportCancelOnDamage = plugin.getConfigManager().isGraveTeleportCancelOnDamage();
+        cancelAllPendingTeleports(false);
 
         refreshAllHolograms();
         refreshAllEffects();
@@ -184,6 +192,7 @@ public class GraveManager {
         createOrUpdateHologram(grave);
         createOrUpdateEffects(grave);
         scheduleAutoRemoval(grave);
+        teleportCooldown.startCooldown(grave.getId(), System.currentTimeMillis());
 
         return Optional.of(grave);
     }
@@ -277,8 +286,10 @@ public class GraveManager {
         return grave.getOwner().equals(player.getUniqueId()) || grave.isPublicAccess();
     }
 
-    public boolean teleportOwnerToGrave(Player player, Grave grave) {
-        if (!grave.getOwner().equals(player.getUniqueId()) || grave.getLocation().getWorld() == null) {
+    private boolean teleportOwnerToGrave(Player player, Grave grave) {
+        if (!grave.getOwner().equals(player.getUniqueId())
+                || grave.getLocation().getWorld() == null
+                || isTeleportCooldownActive(grave)) {
             return false;
         }
 
@@ -291,6 +302,35 @@ public class GraveManager {
         return true;
     }
 
+    public GraveTeleportResult requestOwnerTeleportToGrave(Player player, Grave grave) {
+        if (!grave.getOwner().equals(player.getUniqueId()) || grave.getLocation().getWorld() == null) {
+            return GraveTeleportResult.UNAVAILABLE;
+        }
+
+        if (isTeleportCooldownActive(grave)) {
+            return GraveTeleportResult.COOLDOWN_ACTIVE;
+        }
+
+        PendingGraveTeleport existingTeleport = pendingTeleportsByPlayer.get(player.getUniqueId());
+        if (existingTeleport != null) {
+            return GraveTeleportResult.ALREADY_PENDING;
+        }
+
+        if (teleportWarmupTicks <= 0L) {
+            return teleportOwnerToGrave(player, grave)
+                    ? GraveTeleportResult.TELEPORTED
+                    : GraveTeleportResult.UNAVAILABLE;
+        }
+
+        UUID playerId = player.getUniqueId();
+        UUID graveId = grave.getId();
+        BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin,
+                () -> completePendingTeleport(playerId, graveId),
+                teleportWarmupTicks);
+        pendingTeleportsByPlayer.put(playerId, new PendingGraveTeleport(graveId, task));
+        return GraveTeleportResult.WARMUP_STARTED;
+    }
+
     public boolean giveLocatorForGrave(Player player, Grave grave) {
         if (!plugin.getConfigManager().isLocatorMapEnabled() || !grave.getOwner().equals(player.getUniqueId())) {
             return false;
@@ -301,18 +341,102 @@ public class GraveManager {
         return true;
     }
 
-    public void recordPvPCombat(Player firstPlayer, Player secondPlayer) {
-        long nowMillis = System.currentTimeMillis();
-        teleportCooldown.recordCombat(firstPlayer.getUniqueId(), nowMillis);
-        teleportCooldown.recordCombat(secondPlayer.getUniqueId(), nowMillis);
+    public boolean isTeleportCooldownActive(Grave grave) {
+        return !teleportCooldown.canTeleport(grave.getId(), System.currentTimeMillis());
     }
 
-    public boolean isTeleportCooldownActive(Player player) {
-        return !teleportCooldown.canTeleport(player.getUniqueId(), System.currentTimeMillis());
+    public long getTeleportCooldownRemainingSeconds(Grave grave) {
+        return teleportCooldown.remainingSeconds(grave.getId(), System.currentTimeMillis());
     }
 
-    public long getTeleportCooldownRemainingSeconds(Player player) {
-        return teleportCooldown.remainingSeconds(player.getUniqueId(), System.currentTimeMillis());
+    public long getTeleportWarmupSeconds() {
+        return Math.max(teleportWarmupTicks / 20L, 0L);
+    }
+
+    public boolean cancelPendingTeleportForMove(Player player, Location from, Location to) {
+        if (!pendingTeleportsByPlayer.containsKey(player.getUniqueId()) || from == null || to == null) {
+            return false;
+        }
+
+        String fromWorld = from.getWorld() == null ? null : from.getWorld().getName();
+        String toWorld = to.getWorld() == null ? null : to.getWorld().getName();
+        if (!GraveTeleportWarmupPolicy.shouldCancelForMove(
+                teleportCancelOnMove,
+                fromWorld, from.getBlockX(), from.getBlockY(), from.getBlockZ(),
+                toWorld, to.getBlockX(), to.getBlockY(), to.getBlockZ())) {
+            return false;
+        }
+
+        return cancelPendingTeleport(player, true);
+    }
+
+    public boolean cancelPendingTeleportForDamage(Player player) {
+        if (!teleportCancelOnDamage) {
+            return false;
+        }
+
+        return cancelPendingTeleport(player, true);
+    }
+
+    public boolean cancelPendingTeleport(Player player, boolean notify) {
+        PendingGraveTeleport pendingTeleport = pendingTeleportsByPlayer.remove(player.getUniqueId());
+        if (pendingTeleport == null) {
+            return false;
+        }
+
+        pendingTeleport.task().cancel();
+        if (notify && player.isOnline()) {
+            player.sendMessage(MessageUtils.getColoredMessage(
+                    plugin.getConfigManager().getPrefix()
+                            + plugin.getConfigManager().getMsgTeleportWarmupCancelled()));
+        }
+        return true;
+    }
+
+    private void completePendingTeleport(UUID playerId, UUID graveId) {
+        PendingGraveTeleport pendingTeleport = pendingTeleportsByPlayer.get(playerId);
+        if (pendingTeleport == null || !pendingTeleport.graveId().equals(graveId)) {
+            return;
+        }
+
+        pendingTeleportsByPlayer.remove(playerId);
+        Player player = Bukkit.getPlayer(playerId);
+        Grave grave = gravesById.get(graveId);
+        if (player == null || !player.isOnline() || grave == null) {
+            return;
+        }
+
+        if (!teleportOwnerToGrave(player, grave)) {
+            player.sendMessage(MessageUtils.getColoredMessage(
+                    plugin.getConfigManager().getPrefix()
+                            + plugin.getConfigManager().getMsgInfoTeleportUnavailable()));
+        }
+    }
+
+    private void cancelPendingTeleportsForGrave(UUID graveId) {
+        for (Map.Entry<UUID, PendingGraveTeleport> entry : new HashSet<>(pendingTeleportsByPlayer.entrySet())) {
+            if (!entry.getValue().graveId().equals(graveId)) {
+                continue;
+            }
+
+            pendingTeleportsByPlayer.remove(entry.getKey());
+            entry.getValue().task().cancel();
+        }
+    }
+
+    private void cancelAllPendingTeleports(boolean notify) {
+        for (UUID playerId : new HashSet<>(pendingTeleportsByPlayer.keySet())) {
+            Player player = Bukkit.getPlayer(playerId);
+            if (player != null) {
+                cancelPendingTeleport(player, notify);
+                continue;
+            }
+
+            PendingGraveTeleport pendingTeleport = pendingTeleportsByPlayer.remove(playerId);
+            if (pendingTeleport != null) {
+                pendingTeleport.task().cancel();
+            }
+        }
     }
 
     private void playClaimAnimation(Location location) {
@@ -393,6 +517,7 @@ public class GraveManager {
     }
 
     public void clearAll() {
+        cancelAllPendingTeleports(false);
         new HashSet<>(gravesById.keySet()).forEach(this::removeGrave);
         teleportFeedbackGate.clear();
         if (teleportCooldown != null) {
@@ -494,6 +619,7 @@ public class GraveManager {
         removeHologram(graveId);
         removeEffects(graveId);
         closeAndRemoveChestInventory(graveId);
+        cancelPendingTeleportsForGrave(graveId);
 
         Location location = grave.getLocation();
         Block block = location.getBlock();
@@ -923,6 +1049,9 @@ public class GraveManager {
     }
 
     private record GraveBlockKey(UUID worldId, int x, int y, int z) {
+    }
+
+    private record PendingGraveTeleport(UUID graveId, BukkitTask task) {
     }
 
     private boolean tryAutoEquip(Player player, ItemStack item) {

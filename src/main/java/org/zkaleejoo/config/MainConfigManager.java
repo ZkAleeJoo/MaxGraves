@@ -29,6 +29,9 @@ public class MainConfigManager {
     private int graveDespawnTime;
     private boolean createOnDeath;
     private int graveTeleportCooldownSeconds;
+    private int graveTeleportWarmupSeconds;
+    private boolean graveTeleportCancelOnMove;
+    private boolean graveTeleportCancelOnDamage;
     private boolean locatorMapEnabled;
     private boolean singleActiveGraveLimit;
     private boolean hologramEnabled;
@@ -88,6 +91,9 @@ public class MainConfigManager {
     private String msgOnlyOwnerCanUseMap;
     private String msgLocatorUsed;
     private String msgTeleportCooldown;
+    private String msgTeleportWarmupStarted;
+    private String msgTeleportWarmupCancelled;
+    private String msgTeleportWarmupAlreadyPending;
     private String msgLocatorDisabled;
     private String msgGraveNotFound;
     private String msgGraveExpired;
@@ -146,6 +152,9 @@ public class MainConfigManager {
         debugDeathEvents = config.getBoolean("grave.debug-death-events", false);
         createOnDeath = config.getBoolean("grave.create-on-death", true);
         graveTeleportCooldownSeconds = Math.max(config.getInt("grave.teleport.cooldown-seconds", 15), 0);
+        graveTeleportWarmupSeconds = Math.max(config.getInt("grave.teleport.warmup-seconds", 5), 0);
+        graveTeleportCancelOnMove = config.getBoolean("grave.teleport.cancel-on-move", true);
+        graveTeleportCancelOnDamage = config.getBoolean("grave.teleport.cancel-on-damage", true);
         locatorMapEnabled = config.getBoolean("grave.locator-map.enabled", true);
         singleActiveGraveLimit = config.getBoolean("grave.limit.single-active", false);
         graveMarkerType = GraveMarkerType.fromConfig(config.getString("grave.marker.type", "HEAD"));
@@ -237,7 +246,13 @@ public class MainConfigManager {
         msgOnlyOwnerCanUseMap = lang.getString("messages.only-owner-can-use-map", "&cThis map does not belong to you.");
         msgLocatorUsed = lang.getString("messages.locator-used", "&aTeleported to your grave.");
         msgTeleportCooldown = lang.getString("messages.teleport-cooldown",
-                "&cYou cannot teleport to your grave for another {seconds}s after PvP combat.");
+                "&cYou cannot teleport to this grave for another {seconds}s.");
+        msgTeleportWarmupStarted = lang.getString("messages.teleport-warmup-started",
+                "&eTeleporting to your grave in {seconds}s. Do not move or take damage.");
+        msgTeleportWarmupCancelled = lang.getString("messages.teleport-warmup-cancelled",
+                "&cGrave teleport cancelled.");
+        msgTeleportWarmupAlreadyPending = lang.getString("messages.teleport-warmup-already-pending",
+                "&cYou already have a grave teleport starting.");
         msgLocatorDisabled = lang.getString("messages.locator-disabled",
                 "&cLocator maps are disabled. Use /mg info to teleport to your grave.");
         msgGraveNotFound = lang.getString("messages.grave-not-found", "&cYour grave could not be found.");
@@ -397,6 +412,18 @@ public class MainConfigManager {
         return graveTeleportCooldownSeconds;
     }
 
+    public int getGraveTeleportWarmupSeconds() {
+        return graveTeleportWarmupSeconds;
+    }
+
+    public boolean isGraveTeleportCancelOnMove() {
+        return graveTeleportCancelOnMove;
+    }
+
+    public boolean isGraveTeleportCancelOnDamage() {
+        return graveTeleportCancelOnDamage;
+    }
+
     public boolean isLocatorMapEnabled() {
         return locatorMapEnabled;
     }
@@ -527,6 +554,18 @@ public class MainConfigManager {
 
     public String getMsgTeleportCooldown() {
         return msgTeleportCooldown;
+    }
+
+    public String getMsgTeleportWarmupStarted() {
+        return msgTeleportWarmupStarted;
+    }
+
+    public String getMsgTeleportWarmupCancelled() {
+        return msgTeleportWarmupCancelled;
+    }
+
+    public String getMsgTeleportWarmupAlreadyPending() {
+        return msgTeleportWarmupAlreadyPending;
     }
 
     public String getMsgLocatorDisabled() {

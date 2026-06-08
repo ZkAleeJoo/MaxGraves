@@ -30,8 +30,14 @@ grave:
   debug-death-events: false
   create-on-death: true
   teleport:
-    #Seconds a player must wait after PvP combat before teleporting to a grave (0 = disabled)
+    #Seconds a player must wait after a grave is created before teleporting to it (0 = disabled)
     cooldown-seconds: 15
+    #Seconds the player must stand still before the teleport completes (0 = instant after cooldown)
+    warmup-seconds: 5
+    #Cancel the warmup if the player changes block
+    cancel-on-move: true
+    #Cancel the warmup if the player takes damage
+    cancel-on-damage: true
   locator-map:
     #If false, grave maps are not given and cannot teleport players. Use /mg info instead.
     enabled: true

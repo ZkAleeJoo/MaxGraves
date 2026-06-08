@@ -8,26 +8,26 @@ import java.util.concurrent.TimeUnit;
 class GraveTeleportCooldown {
 
     private final long cooldownMillis;
-    private final Map<UUID, Long> lastCombatMillisByPlayer = new HashMap<>();
+    private final Map<UUID, Long> cooldownStartMillisByTarget = new HashMap<>();
 
     GraveTeleportCooldown(long cooldownMillis) {
         this.cooldownMillis = Math.max(0L, cooldownMillis);
     }
 
-    void recordCombat(UUID playerId, long nowMillis) {
-        if (cooldownMillis <= 0L || playerId == null) {
+    void startCooldown(UUID targetId, long nowMillis) {
+        if (cooldownMillis <= 0L || targetId == null) {
             return;
         }
 
-        lastCombatMillisByPlayer.put(playerId, nowMillis);
+        cooldownStartMillisByTarget.put(targetId, nowMillis);
     }
 
-    boolean canTeleport(UUID playerId, long nowMillis) {
-        return remainingMillis(playerId, nowMillis) <= 0L;
+    boolean canTeleport(UUID targetId, long nowMillis) {
+        return remainingMillis(targetId, nowMillis) <= 0L;
     }
 
-    long remainingSeconds(UUID playerId, long nowMillis) {
-        long remainingMillis = remainingMillis(playerId, nowMillis);
+    long remainingSeconds(UUID targetId, long nowMillis) {
+        long remainingMillis = remainingMillis(targetId, nowMillis);
         if (remainingMillis <= 0L) {
             return 0L;
         }
@@ -36,22 +36,22 @@ class GraveTeleportCooldown {
     }
 
     void clear() {
-        lastCombatMillisByPlayer.clear();
+        cooldownStartMillisByTarget.clear();
     }
 
-    private long remainingMillis(UUID playerId, long nowMillis) {
-        if (cooldownMillis <= 0L || playerId == null) {
+    private long remainingMillis(UUID targetId, long nowMillis) {
+        if (cooldownMillis <= 0L || targetId == null) {
             return 0L;
         }
 
-        Long lastCombatMillis = lastCombatMillisByPlayer.get(playerId);
-        if (lastCombatMillis == null) {
+        Long cooldownStartMillis = cooldownStartMillisByTarget.get(targetId);
+        if (cooldownStartMillis == null) {
             return 0L;
         }
 
-        long remainingMillis = cooldownMillis - Math.max(nowMillis - lastCombatMillis, 0L);
+        long remainingMillis = cooldownMillis - Math.max(nowMillis - cooldownStartMillis, 0L);
         if (remainingMillis <= 0L) {
-            lastCombatMillisByPlayer.remove(playerId);
+            cooldownStartMillisByTarget.remove(targetId);
             return 0L;
         }
 

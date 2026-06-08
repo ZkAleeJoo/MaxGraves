@@ -14,6 +14,7 @@ import org.zkaleejoo.MaxGraves;
 import org.zkaleejoo.config.MainConfigManager;
 import org.zkaleejoo.grave.Grave;
 import org.zkaleejoo.grave.GraveMarkerType;
+import org.zkaleejoo.grave.GraveTeleportResult;
 import org.zkaleejoo.utils.MessageUtils;
 
 import java.util.List;
@@ -182,18 +183,8 @@ public class InfoMenuManager {
             return;
         }
 
-        if (sendTeleportCooldownMessage(player)) {
-            return;
-        }
-
-        boolean teleported = plugin.getGraveManager().teleportOwnerToGrave(player, graveOptional.get());
-        if (!teleported) {
-            player.sendMessage(MessageUtils.getColoredMessage(
-                    plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgInfoTeleportUnavailable()));
-            return;
-        }
-
-        player.closeInventory();
+        handleTeleportResult(player, plugin.getGraveManager().requestOwnerTeleportToGrave(player, graveOptional.get()),
+                graveOptional.get());
     }
 
     private void handleLocator(Player player, InfoMenuHolder holder, UUID graveId) {
@@ -214,15 +205,27 @@ public class InfoMenuManager {
         }
     }
 
-    private boolean sendTeleportCooldownMessage(Player player) {
-        if (!plugin.getGraveManager().isTeleportCooldownActive(player)) {
-            return false;
+    private void handleTeleportResult(Player player, GraveTeleportResult result, Grave grave) {
+        switch (result) {
+            case TELEPORTED -> player.closeInventory();
+            case WARMUP_STARTED -> {
+                String message = plugin.getConfigManager().getMsgTeleportWarmupStarted()
+                        .replace("{seconds}", String.valueOf(plugin.getGraveManager().getTeleportWarmupSeconds()));
+                player.sendMessage(MessageUtils.getColoredMessage(plugin.getConfigManager().getPrefix() + message));
+                player.closeInventory();
+            }
+            case ALREADY_PENDING -> player.sendMessage(MessageUtils.getColoredMessage(
+                    plugin.getConfigManager().getPrefix()
+                            + plugin.getConfigManager().getMsgTeleportWarmupAlreadyPending()));
+            case COOLDOWN_ACTIVE -> {
+                String message = plugin.getConfigManager().getMsgTeleportCooldown()
+                        .replace("{seconds}",
+                                String.valueOf(plugin.getGraveManager().getTeleportCooldownRemainingSeconds(grave)));
+                player.sendMessage(MessageUtils.getColoredMessage(plugin.getConfigManager().getPrefix() + message));
+            }
+            case UNAVAILABLE -> player.sendMessage(MessageUtils.getColoredMessage(
+                    plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgInfoTeleportUnavailable()));
         }
-
-        String message = plugin.getConfigManager().getMsgTeleportCooldown()
-                .replace("{seconds}", String.valueOf(plugin.getGraveManager().getTeleportCooldownRemainingSeconds(player)));
-        player.sendMessage(MessageUtils.getColoredMessage(plugin.getConfigManager().getPrefix() + message));
-        return true;
     }
 
     private Optional<Grave> getOwnedActiveGrave(Player player, InfoMenuHolder holder, UUID graveId) {
