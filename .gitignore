@@ -3,11 +3,3 @@ target/
 pom.xml
 src/test/
 .github/
-src/main/java/org/zkaleejoo/MaxGraves.java
-src/main/java/org/zkaleejoo/commands/MainCommand.java
-src/main/java/org/zkaleejoo/config/CustomConfig.java
-src/main/java/org/zkaleejoo/config/MainConfigManager.java
-src/main/java/org/zkaleejoo/grave/Grave.java
-src/main/java/org/zkaleejoo/grave/GraveAccessPolicy.java
-src/main/java/org/zkaleejoo/grave/GraveManager.java
-src/main/java/org/zkaleejoo/listeners/GraveListener.java
