@@ -15,6 +15,7 @@ import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
@@ -26,8 +27,10 @@ import org.zkaleejoo.MaxGraves;
 import org.zkaleejoo.grave.Grave;
 import org.zkaleejoo.grave.GraveChestHolder;
 import org.zkaleejoo.grave.GraveCreationPolicy;
+import org.zkaleejoo.grave.DeathInventoryReconciler;
 import org.zkaleejoo.grave.GraveMarkerType;
 import org.zkaleejoo.grave.GraveTeleportResult;
+import org.zkaleejoo.grave.ProcessedDeathInventoryGuard;
 import org.zkaleejoo.utils.MessageUtils;
 import java.util.Optional;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -55,9 +58,11 @@ import org.zkaleejoo.commands.InfoMenuHolder;
 public class GraveListener implements Listener {
 
     private static final String TELEPORT_PERMISSION = "maxgrave.tp";
+    private static final long JOIN_RECONCILIATION_DELAY_TICKS = 2L;
 
     private final MaxGraves plugin;
     private final Map<UUID, DeathSnapshot> deathSnapshots = new HashMap<>();
+    private final ProcessedDeathInventoryGuard processedDeathInventoryGuard = new ProcessedDeathInventoryGuard();
 
     public GraveListener(MaxGraves plugin) {
         this.plugin = plugin;
@@ -128,12 +133,6 @@ public class GraveListener implements Listener {
             return;
         }
 
-        if (event.getKeepInventory()) {
-            logDeathDebug("MONITOR_ABORT", player, event, "reason=keep_inventory_true");
-            deathSnapshots.remove(playerId);
-            return;
-        }
-
         if (!GraveCreationPolicy.shouldCreateGrave(
                 plugin.getConfigManager().isSingleActiveGraveLimit(),
                 plugin.getGraveManager().hasActiveGrave(playerId))) {
@@ -144,10 +143,11 @@ public class GraveListener implements Listener {
             return;
         }
 
-        List<ItemStack> graveItems = !snapshot.items().isEmpty()
-                ? copyItems(snapshot.items())
+        List<ItemStack> snapshotItems = copyItems(snapshot.items());
+        List<ItemStack> graveItems = !snapshotItems.isEmpty()
+                ? copyItems(snapshotItems)
                 : copyItems(event.getDrops());
-        int graveExp = event.getKeepLevel() ? 0 : resolveGraveExp(event, snapshot);
+        int graveExp = resolveGraveExp(event, snapshot);
 
         String killerName = resolveKillerName(player);
         boolean killedByPlayer = wasKilledByPlayer(player);
@@ -157,8 +157,8 @@ public class GraveListener implements Listener {
                 .ifPresentOrElse(grave -> {
                     int dropsBeforeClear = event.getDrops().size();
                     int expBeforeClear = event.getDroppedExp();
-                    event.getDrops().clear();
-                    event.setDroppedExp(0);
+                    applyAuthoritativeDeathState(event, player);
+                    processedDeathInventoryGuard.markPending(playerId, snapshotItems);
 
                     logDeathDebug(
                             "MONITOR_GRAVE_CREATED",
@@ -191,6 +191,37 @@ public class GraveListener implements Listener {
                 event,
                 "finalDrops=" + event.getDrops().size() + ", finalDroppedExp=" + event.getDroppedExp());
         deathSnapshots.remove(playerId);
+    }
+
+    private void applyAuthoritativeDeathState(
+            PlayerDeathEvent event,
+            Player player) {
+        event.setKeepInventory(false);
+        event.setKeepLevel(false);
+        clearPaperItemsToKeep(event);
+        event.getDrops().clear();
+        event.setDroppedExp(0);
+        event.setNewExp(0);
+        event.setNewLevel(0);
+        event.setNewTotalExp(0);
+
+        player.getInventory().clear();
+        player.getInventory().setArmorContents(new ItemStack[4]);
+        player.getInventory().setItemInOffHand(null);
+        player.setExp(0.0F);
+        player.setLevel(0);
+        player.setTotalExperience(0);
+    }
+
+    private void clearPaperItemsToKeep(PlayerDeathEvent event) {
+        try {
+            Object itemsToKeep = event.getClass().getMethod("getItemsToKeep").invoke(event);
+            if (itemsToKeep instanceof List<?> keptItems) {
+                keptItems.clear();
+            }
+        } catch (ReflectiveOperationException | SecurityException ignored) {
+            // Spigot does not expose Paper's kept-items list.
+        }
     }
 
     private int resolveGraveExp(PlayerDeathEvent event, DeathSnapshot snapshot) {
@@ -340,8 +371,9 @@ public class GraveListener implements Listener {
 
     @EventHandler
     public void onPlayerRespawn(PlayerRespawnEvent event) {
-        deathSnapshots.remove(event.getPlayer().getUniqueId());
         Player player = event.getPlayer();
+        UUID playerId = player.getUniqueId();
+        deathSnapshots.remove(playerId);
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             int locatorsGiven = plugin.getGraveManager().giveLocatorsForPlayer(player);
             if (locatorsGiven > 0) {
@@ -349,6 +381,54 @@ public class GraveListener implements Listener {
                         plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgMapReceived()));
             }
         });
+        schedulePendingInventoryReconciliation(player);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        if (!player.isDead()) {
+            schedulePendingInventoryReconciliation(player);
+        }
+    }
+
+    private void schedulePendingInventoryReconciliation(Player player) {
+        UUID playerId = player.getUniqueId();
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> processedDeathInventoryGuard.consume(playerId)
+                .ifPresent(snapshotItems -> reconcileRestoredInventory(player, playerId, snapshotItems)),
+                JOIN_RECONCILIATION_DELAY_TICKS);
+    }
+
+    private void reconcileRestoredInventory(Player player, UUID playerId, List<ItemStack> snapshotItems) {
+        if (!player.isOnline()) {
+            processedDeathInventoryGuard.markPending(playerId, snapshotItems);
+            return;
+        }
+
+        ItemStack[] currentItems = player.getInventory().getContents();
+        ItemStack[] reconciledItems = DeathInventoryReconciler.removeSnapshotItems(currentItems, snapshotItems);
+        int removedAmount = countItemAmount(currentItems) - countItemAmount(reconciledItems);
+
+        player.getInventory().setContents(reconciledItems);
+        player.updateInventory();
+
+        if (plugin.getConfigManager().isDebugDeathEvents()) {
+            plugin.getLogger().info("[DeathDebug] phase=JOIN_RECONCILE"
+                    + ", player=" + player.getName()
+                    + ", uuid=" + playerId
+                    + ", snapshotItems=" + snapshotItems.size()
+                    + ", removedAmount=" + Math.max(removedAmount, 0));
+        }
+    }
+
+    private int countItemAmount(ItemStack[] items) {
+        int amount = 0;
+        for (ItemStack item : items) {
+            if (item != null && item.getType() != Material.AIR) {
+                amount += Math.max(item.getAmount(), 0);
+            }
+        }
+        return amount;
     }
 
     private record DeathSnapshot(long deathTick, List<ItemStack> items, int snapshotDroppedExp, int totalExperience,
