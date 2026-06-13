@@ -44,7 +44,7 @@ grave:
   limit:
     #If true, a player can only have one active grave at a time.
     #When the player already has an active grave, new deaths will not create another grave.
-    single-active: false
+    single-active: true
   marker:
     #Visual block used for new graves. Available: HEAD, CHEST
     #HEAD uses the dead player's skin, holograms, particles and claim animation.
