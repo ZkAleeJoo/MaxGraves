@@ -20,7 +20,6 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
 import org.zkaleejoo.MaxGraves;
 import org.zkaleejoo.utils.MessageUtils;
-import org.bukkit.Tag;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
@@ -941,15 +940,7 @@ public class GraveManager {
     }
 
     private boolean isMarkerReplaceable(Material material) {
-        return material.isAir()
-                || Tag.FLOWERS.isTagged(material)
-                || Tag.SMALL_FLOWERS.isTagged(material)
-                || material == Material.TALL_GRASS
-                || material == Material.SHORT_GRASS
-                || material == Material.FERN
-                || material == Material.LARGE_FERN
-                || material == Material.DEAD_BUSH
-                || material == Material.SNOW;
+        return GravePlacementPolicy.isMarkerReplaceable(material);
     }
 
     private boolean hasVerticalGraveConflict(Location location) {
