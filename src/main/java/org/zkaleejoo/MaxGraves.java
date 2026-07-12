@@ -2,7 +2,9 @@ package org.zkaleejoo;
 
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitTask;
+import org.zkaleejoo.scheduler.ScheduledTask;
+import org.zkaleejoo.scheduler.SchedulerAdapter;
+import org.zkaleejoo.scheduler.SchedulerAdapterFactory;
 import org.bstats.bukkit.Metrics;
 import org.zkaleejoo.commands.InfoMenuManager;
 import org.zkaleejoo.commands.MainCommand;
@@ -24,11 +26,14 @@ public final class MaxGraves extends JavaPlugin {
     private InfoMenuManager infoMenuManager;
     private String latestVersion;
     private Metrics metrics;
-    private BukkitTask updateCheckTask;
+    private ScheduledTask updateCheckTask;
+    private SchedulerAdapter schedulerAdapter;
 
     // PLUGIN ENCIENDE
     @Override
     public void onEnable() {
+        schedulerAdapter = SchedulerAdapterFactory.createAdapter(this);
+
         CustomConfig initialConfig = new CustomConfig("config.yml", null, this, false);
         initialConfig.registerConfig();
 
@@ -100,6 +105,10 @@ public final class MaxGraves extends JavaPlugin {
         return mainConfigManager;
     }
 
+    public SchedulerAdapter getSchedulerAdapter() {
+        return schedulerAdapter;
+    }
+
     public GraveManager getGraveManager() {
         return graveManager;
     }
@@ -144,7 +153,7 @@ public final class MaxGraves extends JavaPlugin {
         }
 
         checkUpdates();
-        updateCheckTask = Bukkit.getScheduler().runTaskTimer(this, this::checkUpdates,
+        updateCheckTask = schedulerAdapter.runTimer(this::checkUpdates,
                 UPDATE_CHECK_INTERVAL_TICKS, UPDATE_CHECK_INTERVAL_TICKS);
     }
 

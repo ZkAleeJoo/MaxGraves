@@ -1,6 +1,5 @@
 package org.zkaleejoo.utils;
 
-import org.bukkit.Bukkit;
 import org.zkaleejoo.MaxGraves;
 
 import java.io.BufferedReader;
@@ -21,12 +20,12 @@ public class UpdateChecker {
     }
 
     public void getVersion(final Consumer<String> consumer) {
-        Bukkit.getScheduler().runTaskAsynchronously(this.plugin, () -> {
+        plugin.getSchedulerAdapter().runAsync(() -> {
             HttpURLConnection connection = null;
             try {
                 URL url = URI.create(GITHUB_VERSION_URL).toURL();
                 connection = (HttpURLConnection) url.openConnection();
-                
+
                 connection.setRequestMethod("GET");
                 connection.setRequestProperty("User-Agent", "MaxGraves-UpdateChecker");
                 connection.setConnectTimeout(5000);
@@ -44,7 +43,7 @@ public class UpdateChecker {
                     if (latestVersion != null && !latestVersion.isBlank()) {
                         String trimmedVersion = latestVersion.trim();
                         if (plugin.isEnabled()) {
-                            Bukkit.getScheduler().runTask(plugin, () -> consumer.accept(trimmedVersion));
+                            plugin.getSchedulerAdapter().run(() -> consumer.accept(trimmedVersion));
                         }
                     } else {
                         plugin.getLogger().info("The version is empty.");

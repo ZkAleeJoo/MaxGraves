@@ -17,7 +17,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.scheduler.BukkitTask;
+import org.zkaleejoo.scheduler.ScheduledTask;
 import org.zkaleejoo.MaxGraves;
 import org.zkaleejoo.utils.MessageUtils;
 import java.util.concurrent.ThreadLocalRandom;
@@ -38,10 +38,10 @@ public class GraveManager {
     private final Map<UUID, Grave> gravesById = new HashMap<>();
     private final Map<UUID, Set<UUID>> gravesByPlayer = new HashMap<>();
     private final Map<GraveBlockKey, UUID> gravesByBlock = new HashMap<>();
-    private final Map<UUID, BukkitTask> removalTasks = new HashMap<>();
+    private final Map<UUID, ScheduledTask> removalTasks = new HashMap<>();
     private final Map<UUID, List<UUID>> hologramEntitiesByGrave = new HashMap<>();
-    private final Map<UUID, BukkitTask> hologramTasks = new HashMap<>();
-    private final Map<UUID, BukkitTask> particleTasks = new HashMap<>();
+    private final Map<UUID, ScheduledTask> hologramTasks = new HashMap<>();
+    private final Map<UUID, ScheduledTask> particleTasks = new HashMap<>();
     private final Map<UUID, Inventory> graveChestInventories = new HashMap<>();
     private final Map<UUID, PendingGraveTeleport> pendingTeleportsByPlayer = new HashMap<>();
     private final GraveTeleportFeedbackGate teleportFeedbackGate = new GraveTeleportFeedbackGate(750L);
@@ -275,7 +275,7 @@ public class GraveManager {
             return true;
         }
 
-        Bukkit.getScheduler().runTaskLater(plugin, () -> deliverClaimRewards(player, claimLocation, rewards, rewardExp),
+        plugin.getSchedulerAdapter().runAtLocationLater(claimLocation, () -> deliverClaimRewards(player, claimLocation, rewards, rewardExp),
                 claimAnimationDelayTicks);
 
         return true;
@@ -323,7 +323,7 @@ public class GraveManager {
 
         UUID playerId = player.getUniqueId();
         UUID graveId = grave.getId();
-        BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin,
+        ScheduledTask task = plugin.getSchedulerAdapter().runForPlayerLater(player,
                 () -> completePendingTeleport(playerId, graveId),
                 teleportWarmupTicks);
         pendingTeleportsByPlayer.put(playerId, new PendingGraveTeleport(graveId, task));
@@ -610,7 +610,7 @@ public class GraveManager {
             }
         }
 
-        BukkitTask task = removalTasks.remove(graveId);
+        ScheduledTask task = removalTasks.remove(graveId);
         if (task != null) {
             task.cancel();
         }
@@ -657,7 +657,7 @@ public class GraveManager {
 
     private void scheduleAutoRemoval(Grave grave) {
         long ticks = Math.max((grave.getDespawnAtMillis() - System.currentTimeMillis()) / 50L, 1L);
-        BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        ScheduledTask task = plugin.getSchedulerAdapter().runAtLocationLater(grave.getLocation(), () -> {
             removeGrave(grave.getId());
             Player owner = Bukkit.getPlayer(grave.getOwner());
             if (owner != null && owner.isOnline()) {
@@ -702,7 +702,7 @@ public class GraveManager {
         }
 
         UUID graveId = grave.getId();
-        BukkitTask particleTask = Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
+        ScheduledTask particleTask = plugin.getSchedulerAdapter().runAtLocationTimer(grave.getLocation(), new Runnable() {
             private double angle;
             private double offsetY;
 
@@ -783,7 +783,7 @@ public class GraveManager {
 
         hologramEntitiesByGrave.put(grave.getId(), entityIds);
 
-        BukkitTask task = Bukkit.getScheduler().runTaskTimer(plugin, () -> updateHologramText(grave),
+        ScheduledTask task = plugin.getSchedulerAdapter().runAtLocationTimer(grave.getLocation(), () -> updateHologramText(grave),
                 hologramUpdateIntervalTicks, hologramUpdateIntervalTicks);
         hologramTasks.put(grave.getId(), task);
     }
@@ -808,7 +808,7 @@ public class GraveManager {
     }
 
     private void removeHologram(UUID graveId) {
-        BukkitTask hologramTask = hologramTasks.remove(graveId);
+        ScheduledTask hologramTask = hologramTasks.remove(graveId);
         if (hologramTask != null) {
             hologramTask.cancel();
         }
@@ -827,7 +827,7 @@ public class GraveManager {
     }
 
     private void removeEffects(UUID graveId) {
-        BukkitTask effectTask = particleTasks.remove(graveId);
+        ScheduledTask effectTask = particleTasks.remove(graveId);
         if (effectTask != null) {
             effectTask.cancel();
         }
@@ -1042,7 +1042,7 @@ public class GraveManager {
     private record GraveBlockKey(UUID worldId, int x, int y, int z) {
     }
 
-    private record PendingGraveTeleport(UUID graveId, BukkitTask task) {
+    private record PendingGraveTeleport(UUID graveId, ScheduledTask task) {
     }
 
     private boolean tryAutoEquip(Player player, ItemStack item) {

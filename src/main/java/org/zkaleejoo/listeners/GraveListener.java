@@ -374,7 +374,7 @@ public class GraveListener implements Listener {
         Player player = event.getPlayer();
         UUID playerId = player.getUniqueId();
         deathSnapshots.remove(playerId);
-        plugin.getServer().getScheduler().runTask(plugin, () -> {
+        plugin.getSchedulerAdapter().runForPlayer(player, () -> {
             int locatorsGiven = plugin.getGraveManager().giveLocatorsForPlayer(player);
             if (locatorsGiven > 0) {
                 player.sendMessage(MessageUtils.getColoredMessage(
@@ -394,7 +394,7 @@ public class GraveListener implements Listener {
 
     private void schedulePendingInventoryReconciliation(Player player) {
         UUID playerId = player.getUniqueId();
-        plugin.getServer().getScheduler().runTaskLater(plugin, () -> processedDeathInventoryGuard.consume(playerId)
+        plugin.getSchedulerAdapter().runForPlayerLater(player, () -> processedDeathInventoryGuard.consume(playerId)
                 .ifPresent(snapshotItems -> reconcileRestoredInventory(player, playerId, snapshotItems)),
                 JOIN_RECONCILIATION_DELAY_TICKS);
     }
@@ -673,7 +673,7 @@ public class GraveListener implements Listener {
             return;
         }
 
-        plugin.getServer().getScheduler().runTask(plugin,
+        plugin.getSchedulerAdapter().runForPlayer(player,
                 () -> plugin.getGraveManager().syncGraveChestInventory(player, holder.getGraveId(), topInventory));
     }
 

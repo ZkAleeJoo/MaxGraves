@@ -1,6 +1,5 @@
 .vscode/
 target/
-pom.xml
 src/test/
 .github/
 docs/
