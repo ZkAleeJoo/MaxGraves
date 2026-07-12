@@ -12,6 +12,7 @@ public final class DeathInventoryReconciler {
     private DeathInventoryReconciler() {
     }
 
+    @SuppressWarnings("null")
     public static ItemStack[] removeSnapshotItems(ItemStack[] currentItems, List<ItemStack> snapshotItems) {
         ItemStack[] reconciled = cloneItems(currentItems);
         List<StackAmount<ItemStack>> current = IntStream.range(0, reconciled.length)
