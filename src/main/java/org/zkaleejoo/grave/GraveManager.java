@@ -7,7 +7,6 @@ import org.bukkit.block.Block;
 import org.bukkit.block.Container;
 import org.bukkit.block.Skull;
 import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EntityEquipment;
@@ -39,7 +38,7 @@ public class GraveManager {
     private final Map<UUID, Set<UUID>> gravesByPlayer = new HashMap<>();
     private final Map<GraveBlockKey, UUID> gravesByBlock = new HashMap<>();
     private final Map<UUID, ScheduledTask> removalTasks = new HashMap<>();
-    private final Map<UUID, List<UUID>> hologramEntitiesByGrave = new HashMap<>();
+    private final Map<UUID, List<ArmorStand>> hologramEntitiesByGrave = new HashMap<>();
     private final Map<UUID, ScheduledTask> hologramTasks = new HashMap<>();
     private final Map<UUID, ScheduledTask> particleTasks = new HashMap<>();
     private final Map<UUID, Inventory> graveChestInventories = new HashMap<>();
@@ -293,11 +292,13 @@ public class GraveManager {
         }
 
         Location destination = grave.getLocation().clone().add(0.5D, 1D, 0.5D);
-        player.teleport(destination);
-        if (teleportFeedbackGate.shouldAnnounce(player.getUniqueId(), grave.getId(), System.currentTimeMillis())) {
-            player.sendMessage(MessageUtils.getColoredMessage(
-                    plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgLocatorUsed()));
-        }
+        player.teleportAsync(destination).thenAccept(success -> {
+            if (success && teleportFeedbackGate.shouldAnnounce(player.getUniqueId(), grave.getId(),
+                    System.currentTimeMillis())) {
+                player.sendMessage(MessageUtils.getColoredMessage(
+                        plugin.getConfigManager().getPrefix() + plugin.getConfigManager().getMsgLocatorUsed()));
+            }
+        });
         return true;
     }
 
@@ -623,13 +624,17 @@ public class GraveManager {
         Location location = grave.getLocation();
         Block block = location.getBlock();
         Material markerMaterial = grave.getMarkerType().getMaterial();
-        if (block.getType() == markerMaterial
-                || (markerMaterial == Material.PLAYER_HEAD && block.getType() == Material.PLAYER_WALL_HEAD)) {
-            if (block.getState() instanceof Container container) {
-                container.getInventory().clear();
-                container.update(true, false);
+        try {
+            if (block.getType() == markerMaterial
+                    || (markerMaterial == Material.PLAYER_HEAD && block.getType() == Material.PLAYER_WALL_HEAD)) {
+                if (block.getState() instanceof Container container) {
+                    container.getInventory().clear();
+                    container.update(true, false);
+                }
+                block.setType(Material.AIR, false);
             }
-            block.setType(Material.AIR, false);
+        } catch (Exception e) {
+            plugin.getLogger().fine("Could not remove grave marker block: " + e.getMessage());
         }
     }
 
@@ -640,7 +645,9 @@ public class GraveManager {
         }
 
         for (HumanEntity viewer : new ArrayList<>(inventory.getViewers())) {
-            viewer.closeInventory();
+            if (viewer instanceof Player player) {
+                plugin.getSchedulerAdapter().runForPlayer(player, player::closeInventory);
+            }
         }
     }
 
@@ -755,42 +762,52 @@ public class GraveManager {
             return;
         }
 
-        Location hologramAnchor = grave.getLocation().getBlock().getLocation().add(0.5D, 0.0D, 0.5D);
+        UUID graveId = grave.getId();
+        Location graveLocation = grave.getLocation();
 
-        List<UUID> entityIds = new ArrayList<>();
-        for (int lineIndex = 0; lineIndex < hologramLines.size(); lineIndex++) {
-            Location lineLocation = hologramAnchor.clone().add(
-                    0.0D,
-                    hologramBaseHeight + ((hologramLines.size() - 1 - lineIndex) * hologramLineSpacing),
-                    0.0D);
+        plugin.getSchedulerAdapter().runAtLocation(graveLocation, () -> {
+            if (!gravesById.containsKey(graveId)) {
+                return;
+            }
 
-            @SuppressWarnings("null")
-            ArmorStand stand = lineLocation.getWorld().spawn(lineLocation, ArmorStand.class, spawned -> {
-                spawned.setInvisible(true);
-                spawned.setInvulnerable(true);
-                spawned.setMarker(true);
-                spawned.setGravity(false);
-                spawned.setSilent(true);
-                spawned.setCollidable(false);
-                spawned.setCanPickupItems(false);
-                spawned.setCustomNameVisible(true);
-                spawned.setPersistent(false);
-            });
+            Location hologramAnchor = graveLocation.getBlock().getLocation().add(0.5D, 0.0D, 0.5D);
 
-            stand.customName(LegacyComponentSerializer.legacySection().deserialize(getHologramLine(grave, lineIndex)));
-            entityIds.add(stand.getUniqueId());
-        }
+            List<ArmorStand> stands = new ArrayList<>();
+            for (int lineIndex = 0; lineIndex < hologramLines.size(); lineIndex++) {
+                Location lineLocation = hologramAnchor.clone().add(
+                        0.0D,
+                        hologramBaseHeight + ((hologramLines.size() - 1 - lineIndex) * hologramLineSpacing),
+                        0.0D);
 
-        hologramEntitiesByGrave.put(grave.getId(), entityIds);
+                @SuppressWarnings("null")
+                ArmorStand stand = lineLocation.getWorld().spawn(lineLocation, ArmorStand.class, spawned -> {
+                    spawned.setInvisible(true);
+                    spawned.setInvulnerable(true);
+                    spawned.setMarker(true);
+                    spawned.setGravity(false);
+                    spawned.setSilent(true);
+                    spawned.setCollidable(false);
+                    spawned.setCanPickupItems(false);
+                    spawned.setCustomNameVisible(true);
+                    spawned.setPersistent(false);
+                });
 
-        ScheduledTask task = plugin.getSchedulerAdapter().runAtLocationTimer(grave.getLocation(), () -> updateHologramText(grave),
-                hologramUpdateIntervalTicks, hologramUpdateIntervalTicks);
-        hologramTasks.put(grave.getId(), task);
+                stand.customName(LegacyComponentSerializer.legacySection().deserialize(getHologramLine(grave, lineIndex)));
+                stands.add(stand);
+            }
+
+            hologramEntitiesByGrave.put(graveId, stands);
+
+            ScheduledTask task = plugin.getSchedulerAdapter().runAtLocationTimer(graveLocation,
+                    () -> updateHologramText(grave),
+                    hologramUpdateIntervalTicks, hologramUpdateIntervalTicks);
+            hologramTasks.put(graveId, task);
+        });
     }
 
     private void updateHologramText(Grave grave) {
-        List<UUID> entityIds = hologramEntitiesByGrave.get(grave.getId());
-        if (entityIds == null || entityIds.isEmpty()) {
+        List<ArmorStand> stands = hologramEntitiesByGrave.get(grave.getId());
+        if (stands == null || stands.isEmpty()) {
             return;
         }
 
@@ -798,9 +815,9 @@ public class GraveManager {
             return;
         }
 
-        for (int i = 0; i < entityIds.size(); i++) {
-            Entity entity = Bukkit.getEntity(entityIds.get(i));
-            if (!(entity instanceof ArmorStand stand) || stand.isDead()) {
+        for (int i = 0; i < stands.size(); i++) {
+            ArmorStand stand = stands.get(i);
+            if (stand.isDead()) {
                 continue;
             }
             stand.customName(LegacyComponentSerializer.legacySection().deserialize(getHologramLine(grave, i)));
@@ -813,15 +830,18 @@ public class GraveManager {
             hologramTask.cancel();
         }
 
-        List<UUID> entities = hologramEntitiesByGrave.remove(graveId);
-        if (entities == null) {
+        List<ArmorStand> stands = hologramEntitiesByGrave.remove(graveId);
+        if (stands == null) {
             return;
         }
 
-        for (UUID entityId : entities) {
-            Entity entity = Bukkit.getEntity(entityId);
-            if (entity != null) {
-                entity.remove();
+        for (ArmorStand stand : stands) {
+            try {
+                if (!stand.isDead()) {
+                    stand.remove();
+                }
+            } catch (Exception ignored) {
+                // Entity removal may fail during shutdown or from wrong region thread in Folia
             }
         }
     }

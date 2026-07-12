@@ -158,6 +158,10 @@ public final class MaxGraves extends JavaPlugin {
     }
 
     private void syncMetricsState() {
+        if (SchedulerAdapterFactory.isFolia()) {
+            return;
+        }
+
         if (getConfigManager().isBStatsEnabled()) {
             if (metrics == null) {
                 metrics = new Metrics(this, BSTATS_PLUGIN_ID);

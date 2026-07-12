@@ -2,6 +2,7 @@ name: MaxGraves
 version: ${project.version}
 main: org.zkaleejoo.MaxGraves
 api-version: '1.21'
+folia-supported: true
 authors: [ ZkAleeJoo ]
 description: Plugin based on typical Minecraft tombs
 
