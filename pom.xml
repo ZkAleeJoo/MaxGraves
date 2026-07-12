@@ -6,7 +6,7 @@
 
     <groupId>org.zkaleejoo</groupId>
     <artifactId>MaxGraves</artifactId>
-    <version>2.0.8</version>
+    <version>3.0.0</version>
     <packaging>jar</packaging>
 
     <name>MaxGraves</name>
