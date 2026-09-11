@@ -9,9 +9,7 @@
 #Remember not to delete any line of code.
 #For problems, bugs, ideas or suggestions you can do it on the discord server.
 messages:
-  update-available: "&f&lNEW VERSION: &7{version}"
-  update-current: "&7Your current version: &c{version}"
-  update-download: "&eDownload it to get improvements and fixes."
+  update-available: "&f&lNEW VERSION: &7{link}"
   no-permission: "&#FF4C4C&l✖ &cYou do not have permission to use this command."
   plugin-reload: "&#4CFFB2&l✔ &aSettings and messages have been successfully reloaded."
   usage-command: "&#FF9E4C&l⚠ &cUse: &f/maxgraves &7<reload|info>"

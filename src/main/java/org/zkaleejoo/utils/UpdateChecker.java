@@ -33,7 +33,9 @@ public class UpdateChecker {
 
                 int statusCode = connection.getResponseCode();
                 if (statusCode < 200 || statusCode >= 300) {
-                    plugin.getLogger().warning("Could not check updates. HTTP " + statusCode);
+                    plugin.getLogger().warning(
+                            "The update server could not be found; I recommend reporting this to Discord support. "
+                                    + statusCode);
                     return;
                 }
 

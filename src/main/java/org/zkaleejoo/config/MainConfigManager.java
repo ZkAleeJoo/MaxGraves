@@ -123,8 +123,6 @@ public class MainConfigManager {
     private String msgInfoAccessPrivate;
     private String msgWorldBlacklisted;
     private String msgUpdateAvailable;
-    private String msgUpdateCurrent;
-    private String msgUpdateDownload;
 
     public MainConfigManager(MaxGraves plugin) {
         this.plugin = plugin;
@@ -300,10 +298,7 @@ public class MainConfigManager {
         msgWorldBlacklisted = lang.getString("messages.world-blacklisted",
                 "&cGraves are disabled in this world.");
         msgUpdateAvailable = lang.getString("messages.update-available",
-                "&f&lNEW VERSION: &7{version}");
-        msgUpdateCurrent = lang.getString("messages.update-current", "&7Your current version: &c{version}");
-        msgUpdateDownload = lang.getString("messages.update-download",
-                "&eDownload it to get improvements and fixes.");
+                "&f&lNEW VERSION: &7{link}");
     }
 
     public void reloadConfig() {
@@ -778,13 +773,5 @@ public class MainConfigManager {
 
     public String getMsgUpdateAvailable() {
         return msgUpdateAvailable;
-    }
-
-    public String getMsgUpdateCurrent() {
-        return msgUpdateCurrent;
-    }
-
-    public String getMsgUpdateDownload() {
-        return msgUpdateDownload;
     }
 }

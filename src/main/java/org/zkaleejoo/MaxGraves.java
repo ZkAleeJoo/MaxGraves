@@ -18,6 +18,7 @@ import org.zkaleejoo.utils.UpdateChecker;
 
 public final class MaxGraves extends JavaPlugin {
 
+    public static final String UPDATE_DOWNLOAD_URL = "https://modrinth.com/plugin/maxgraves";
     private static final int BSTATS_PLUGIN_ID = 31607;
     private static final long UPDATE_CHECK_INTERVAL_TICKS = 20L * 60L * 60L * 5L;
 
@@ -62,7 +63,7 @@ public final class MaxGraves extends JavaPlugin {
                 "&5&lMaxGraves &8» &5        \\/         \\/      \\_/      \\/        \\/         \\/                 \\/        \\/ "));
 
         Bukkit.getConsoleSender().sendMessage(MessageUtils
-                .getColoredMessage("&5&lMaxGraves &8» &5The plugin has been enabled! Version: "));
+                .getColoredMessage("&5&lMaxGraves &8» &fThe plugin was activated successfully"));
 
         startUpdateChecks();
     }
@@ -84,7 +85,7 @@ public final class MaxGraves extends JavaPlugin {
         }
 
         Bukkit.getConsoleSender().sendMessage(
-                MessageUtils.getColoredMessage("&5&lMaxGraves &8» &fThe plugin has been disabled! Version: "));
+                MessageUtils.getColoredMessage("&5&lMaxGraves &8» &cThe plugin was deactivated successfully"));
     }
 
     @SuppressWarnings("null")
@@ -126,17 +127,13 @@ public final class MaxGraves extends JavaPlugin {
             if (this.getPluginMeta().getVersion().equalsIgnoreCase(version)) {
                 this.latestVersion = null;
                 Bukkit.getConsoleSender().sendMessage(MessageUtils.getColoredMessage(
-                        "&5&lMaxGraves &8» &aA check for updates was performed and nothing was found."));
+                        "&5&lMaxGraves &8» &fA check for updates was performed and nothing was found."));
             } else {
                 this.latestVersion = version;
 
                 Bukkit.getConsoleSender()
                         .sendMessage(MessageUtils
-                                .getColoredMessage("&5&lMaxGraves &8» &f&lNEW VERSION: &7" + version));
-                Bukkit.getConsoleSender().sendMessage(
-                        MessageUtils
-                                .getColoredMessage(
-                                        "&5&lMaxGraves &8» &fDownload it now at the following link: &7https://modrinth.com/plugin/maxgraves"));
+                                .getColoredMessage("&5&lMaxGraves &8» &f&lNEW VERSION: &7" + UPDATE_DOWNLOAD_URL));
             }
         });
     }

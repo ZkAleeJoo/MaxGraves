@@ -8,10 +8,11 @@ import org.zkaleejoo.MaxGraves;
 import org.zkaleejoo.config.MainConfigManager;
 import org.zkaleejoo.utils.MessageUtils;
 
+import org.zkaleejoo.utils.UpdateNotificationFormatter;
+
 public class PlayerJoinListener implements Listener {
 
     private static final String UPDATE_NOTIFY_PERMISSION = "maxgrave.admin";
-    private static final String DOWNLOAD_URL = "https://modrinth.com/plugin/maxgraves";
 
     private final MaxGraves plugin;
 
@@ -28,18 +29,13 @@ public class PlayerJoinListener implements Listener {
             return;
         }
 
-        String latest = plugin.getLatestVersion();
-        if (latest == null || plugin.getPluginMeta().getVersion().equalsIgnoreCase(latest)) {
-            return;
+        for (String line : UpdateNotificationFormatter.format(
+                config.getPrefix(),
+                config.getMsgUpdateAvailable(),
+                plugin.getPluginMeta().getVersion(),
+                plugin.getLatestVersion(),
+                MaxGraves.UPDATE_DOWNLOAD_URL)) {
+            player.sendMessage(MessageUtils.getColoredMessage(line));
         }
-
-        player.sendMessage(" ");
-        player.sendMessage(MessageUtils.getColoredMessage(
-                config.getPrefix() + config.getMsgUpdateAvailable().replace("{version}", latest)));
-        player.sendMessage(MessageUtils.getColoredMessage(
-                config.getMsgUpdateCurrent().replace("{version}", plugin.getPluginMeta().getVersion())));
-        player.sendMessage(MessageUtils.getColoredMessage(config.getMsgUpdateDownload()));
-        player.sendMessage(MessageUtils.getColoredMessage("&7" + DOWNLOAD_URL));
-        player.sendMessage(" ");
     }
 }
