@@ -42,6 +42,7 @@ public class MessageUtils {
         return new String(chars);
     }
 
+    @SuppressWarnings("null")
     public static Component getColoredComponent(String message) {
         return LegacyComponentSerializer.legacySection().deserialize(getColoredMessage(message));
     }
@@ -51,7 +52,8 @@ public class MessageUtils {
     }
 
     public static void broadcastToPlayersOnly(String message) {
-        if (message == null || message.isEmpty()) return;
+        if (message == null || message.isEmpty())
+            return;
         String coloredMessage = getColoredMessage(message);
         for (Player player : org.bukkit.Bukkit.getOnlinePlayers()) {
             if (player != null) {
