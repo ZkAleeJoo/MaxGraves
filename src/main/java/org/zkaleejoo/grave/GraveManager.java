@@ -274,7 +274,8 @@ public class GraveManager {
             return true;
         }
 
-        plugin.getSchedulerAdapter().runAtLocationLater(claimLocation, () -> deliverClaimRewards(player, claimLocation, rewards, rewardExp),
+        plugin.getSchedulerAdapter().runAtLocationLater(claimLocation,
+                () -> deliverClaimRewards(player, claimLocation, rewards, rewardExp),
                 claimAnimationDelayTicks);
 
         return true;
@@ -709,48 +710,53 @@ public class GraveManager {
         }
 
         UUID graveId = grave.getId();
-        ScheduledTask particleTask = plugin.getSchedulerAdapter().runAtLocationTimer(grave.getLocation(), new Runnable() {
-            private double angle;
-            private double offsetY;
+        ScheduledTask particleTask = plugin.getSchedulerAdapter().runAtLocationTimer(grave.getLocation(),
+                new Runnable() {
+                    private double angle;
+                    private double offsetY;
 
-            @Override
-            public void run() {
-                Location markerLocation = grave.getLocation();
-                World world = markerLocation.getWorld();
-                if (world == null) {
-                    return;
-                }
+                    @Override
+                    public void run() {
+                        Location markerLocation = grave.getLocation();
+                        World world = markerLocation.getWorld();
+                        if (world == null) {
+                            return;
+                        }
 
-                Location center = markerLocation.getBlock().getLocation().add(0.5D, 0.25D, 0.5D);
+                        Location center = markerLocation.getBlock().getLocation().add(0.5D, 0.25D, 0.5D);
 
-                double x = center.getX() + (Math.cos(angle) * effectsSpiralRadius);
-                double z = center.getZ() + (Math.sin(angle) * effectsSpiralRadius);
-                double y = center.getY() + offsetY;
+                        double x = center.getX() + (Math.cos(angle) * effectsSpiralRadius);
+                        double z = center.getZ() + (Math.sin(angle) * effectsSpiralRadius);
+                        double y = center.getY() + offsetY;
 
-                world.spawnParticle(effectsPrimaryParticle, x, y, z, effectsPrimaryCount, 0.05D, 0.08D, 0.05D, 0.005D);
-                world.spawnParticle(effectsSecondaryParticle, center.getX(),
-                        center.getY() + (effectsSpiralHeight * 0.5D), center.getZ(), effectsSecondaryCount, 0.25D,
-                        0.45D, 0.25D, 0.002D);
+                        world.spawnParticle(effectsPrimaryParticle, x, y, z, effectsPrimaryCount, 0.05D, 0.08D, 0.05D,
+                                0.005D);
+                        world.spawnParticle(effectsSecondaryParticle, center.getX(),
+                                center.getY() + (effectsSpiralHeight * 0.5D), center.getZ(), effectsSecondaryCount,
+                                0.25D,
+                                0.45D, 0.25D, 0.002D);
 
-                if (effectsAmbientSoundEnabled && ThreadLocalRandom.current().nextDouble() <= 0.09D) {
-                    world.playSound(center, effectsAmbientSound, effectsAmbientSoundVolume, effectsAmbientSoundPitch);
-                }
+                        if (effectsAmbientSoundEnabled && ThreadLocalRandom.current().nextDouble() <= 0.09D) {
+                            world.playSound(center, effectsAmbientSound, effectsAmbientSoundVolume,
+                                    effectsAmbientSoundPitch);
+                        }
 
-                angle += 0.33D;
-                if (angle >= Math.PI * 2) {
-                    angle -= Math.PI * 2;
-                }
+                        angle += 0.33D;
+                        if (angle >= Math.PI * 2) {
+                            angle -= Math.PI * 2;
+                        }
 
-                offsetY += effectsVerticalSpeed;
-                if (offsetY > effectsSpiralHeight) {
-                    offsetY = 0D;
-                }
-            }
-        }, effectsUpdateIntervalTicks, effectsUpdateIntervalTicks);
+                        offsetY += effectsVerticalSpeed;
+                        if (offsetY > effectsSpiralHeight) {
+                            offsetY = 0D;
+                        }
+                    }
+                }, effectsUpdateIntervalTicks, effectsUpdateIntervalTicks);
 
         particleTasks.put(graveId, particleTask);
     }
 
+    @SuppressWarnings("null")
     private void createOrUpdateHologram(Grave grave) {
         removeHologram(grave.getId());
 
@@ -792,7 +798,8 @@ public class GraveManager {
                     spawned.setPersistent(false);
                 });
 
-                stand.customName(LegacyComponentSerializer.legacySection().deserialize(getHologramLine(grave, lineIndex)));
+                stand.customName(
+                        LegacyComponentSerializer.legacySection().deserialize(getHologramLine(grave, lineIndex)));
                 stands.add(stand);
             }
 
@@ -805,6 +812,7 @@ public class GraveManager {
         });
     }
 
+    @SuppressWarnings("null")
     private void updateHologramText(Grave grave) {
         List<ArmorStand> stands = hologramEntitiesByGrave.get(grave.getId());
         if (stands == null || stands.isEmpty()) {
