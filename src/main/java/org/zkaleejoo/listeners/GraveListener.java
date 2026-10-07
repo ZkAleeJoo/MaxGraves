@@ -331,6 +331,7 @@ public class GraveListener implements Listener {
         return false;
     }
 
+    @SuppressWarnings("null")
     private String getEntityDisplayName(Entity entity) {
         if (entity instanceof Player killerPlayer) {
             return killerPlayer.getName();
@@ -638,7 +639,6 @@ public class GraveListener implements Listener {
     public void onPlayerQuit(PlayerQuitEvent event) {
         plugin.getGraveManager().cancelPendingTeleport(event.getPlayer(), false);
     }
-
 
     private boolean isInfoMenu(InventoryClickEvent event) {
         return event.getView().getTopInventory().getHolder(false) instanceof InfoMenuHolder;
