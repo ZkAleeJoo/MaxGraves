@@ -28,7 +28,7 @@ import org.bukkit.entity.ExperienceOrb;
 import java.util.*;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class GraveManager {
 
@@ -36,7 +36,7 @@ public class GraveManager {
     private final NamespacedKeySet keys;
     private final Map<UUID, Grave> gravesById = new HashMap<>();
     private final Map<UUID, Set<UUID>> gravesByPlayer = new HashMap<>();
-    private final Map<GraveBlockKey, UUID> gravesByBlock = new HashMap<>();
+    private final Map<GraveBlockKey, Grave> gravesByBlock = new ConcurrentHashMap<>();
     private final Map<UUID, ScheduledTask> removalTasks = new HashMap<>();
     private final Map<UUID, List<ArmorStand>> hologramEntitiesByGrave = new HashMap<>();
     private final Map<UUID, ScheduledTask> hologramTasks = new HashMap<>();
@@ -199,13 +199,17 @@ public class GraveManager {
         if (!plugin.getConfigManager().isLocatorMapEnabled()) {
             return 0;
         }
+        List<Grave> playerGraves = getGravesByPlayer(player.getUniqueId());
+        if (playerGraves.isEmpty()) {
+            return 0;
+        }
 
         Set<UUID> existingLocatorTargets = new HashSet<>();
         for (ItemStack item : player.getInventory().getContents()) {
             getLocatorTarget(item).ifPresent(existingLocatorTargets::add);
         }
         int givenLocators = 0;
-        for (Grave grave : getGravesByPlayer(player.getUniqueId())) {
+        for (Grave grave : playerGraves) {
             if (!existingLocatorTargets.contains(grave.getId())) {
                 giveLocatorMap(player, grave);
                 existingLocatorTargets.add(grave.getId());
@@ -221,12 +225,19 @@ public class GraveManager {
             return Optional.empty();
         }
 
-        UUID graveId = gravesByBlock.get(toBlockKey(location));
-        return graveId != null ? Optional.ofNullable(gravesById.get(graveId)) : Optional.empty();
+        return Optional.ofNullable(gravesByBlock.get(toBlockKey(location)));
     }
 
     public Optional<Grave> getGraveByMarkerBlock(Block block) {
-        return getGraveByBlock(block.getLocation());
+        if (!hasActiveGraves()) {
+            return Optional.empty();
+        }
+        GraveBlockKey key = new GraveBlockKey(block.getWorld().getUID(), block.getX(), block.getY(), block.getZ());
+        return Optional.ofNullable(gravesByBlock.get(key));
+    }
+
+    public boolean hasActiveGraves() {
+        return !gravesByBlock.isEmpty();
     }
 
     public Optional<Grave> getGraveByPlayer(UUID playerId) {
@@ -603,6 +614,7 @@ public class GraveManager {
 
         deindexGraveBlocks(grave);
         gravesById.remove(graveId);
+        teleportCooldown.remove(graveId);
 
         Set<UUID> ownerGraves = gravesByPlayer.get(grave.getOwner());
         if (ownerGraves != null) {
@@ -705,25 +717,29 @@ public class GraveManager {
             return;
         }
 
-        if (!effectsEnabled || grave.getLocation().getWorld() == null) {
+        Location marker = grave.getLocation();
+        if (!effectsEnabled || marker.getWorld() == null) {
             return;
         }
 
         UUID graveId = grave.getId();
-        ScheduledTask particleTask = plugin.getSchedulerAdapter().runAtLocationTimer(grave.getLocation(),
+        Location center = marker.clone().add(0.5D, 0.25D, 0.5D);
+        int chunkX = marker.getBlockX() >> 4;
+        int chunkZ = marker.getBlockZ() >> 4;
+        ScheduledTask particleTask = plugin.getSchedulerAdapter().runAtLocationTimer(marker,
                 new Runnable() {
                     private double angle;
                     private double offsetY;
 
                     @Override
                     public void run() {
-                        Location markerLocation = grave.getLocation();
-                        World world = markerLocation.getWorld();
-                        if (world == null) {
+                        if (!center.isWorldLoaded()) {
                             return;
                         }
-
-                        Location center = markerLocation.getBlock().getLocation().add(0.5D, 0.25D, 0.5D);
+                        World world = center.getWorld();
+                        if (!world.isChunkLoaded(chunkX, chunkZ)) {
+                            return;
+                        }
 
                         double x = center.getX() + (Math.cos(angle) * effectsSpiralRadius);
                         double z = center.getZ() + (Math.sin(angle) * effectsSpiralRadius);
@@ -772,13 +788,14 @@ public class GraveManager {
         Location graveLocation = grave.getLocation();
 
         plugin.getSchedulerAdapter().runAtLocation(graveLocation, () -> {
-            if (!gravesById.containsKey(graveId)) {
+            if (!gravesById.containsKey(graveId) || !hologramEnabled || hologramEntitiesByGrave.containsKey(graveId)) {
                 return;
             }
 
             Location hologramAnchor = graveLocation.getBlock().getLocation().add(0.5D, 0.0D, 0.5D);
 
             List<ArmorStand> stands = new ArrayList<>();
+            GraveHologramCountdown countdown = new GraveHologramCountdown(grave.getDespawnAtMillis());
             for (int lineIndex = 0; lineIndex < hologramLines.size(); lineIndex++) {
                 Location lineLocation = hologramAnchor.clone().add(
                         0.0D,
@@ -798,38 +815,19 @@ public class GraveManager {
                     spawned.setPersistent(false);
                 });
 
-                stand.customName(
-                        LegacyComponentSerializer.legacySection().deserialize(getHologramLine(grave, lineIndex)));
+                countdown.addLine(stand, resolveHologramTemplate(grave, graveLocation, hologramLines.get(lineIndex)));
                 stands.add(stand);
             }
 
             hologramEntitiesByGrave.put(graveId, stands);
 
-            ScheduledTask task = plugin.getSchedulerAdapter().runAtLocationTimer(graveLocation,
-                    () -> updateHologramText(grave),
-                    hologramUpdateIntervalTicks, hologramUpdateIntervalTicks);
-            hologramTasks.put(graveId, task);
-        });
-    }
-
-    @SuppressWarnings("null")
-    private void updateHologramText(Grave grave) {
-        List<ArmorStand> stands = hologramEntitiesByGrave.get(grave.getId());
-        if (stands == null || stands.isEmpty()) {
-            return;
-        }
-
-        if (grave.getLocation().getWorld() == null) {
-            return;
-        }
-
-        for (int i = 0; i < stands.size(); i++) {
-            ArmorStand stand = stands.get(i);
-            if (stand.isDead()) {
-                continue;
+            if (countdown.hasTimedLines()) {
+                countdown.run();
+                ScheduledTask task = plugin.getSchedulerAdapter().runAtLocationTimer(graveLocation, countdown,
+                        hologramUpdateIntervalTicks, hologramUpdateIntervalTicks);
+                hologramTasks.put(graveId, task);
             }
-            stand.customName(LegacyComponentSerializer.legacySection().deserialize(getHologramLine(grave, i)));
-        }
+        });
     }
 
     private void removeHologram(UUID graveId) {
@@ -861,35 +859,17 @@ public class GraveManager {
         }
     }
 
-    private String getHologramLine(Grave grave, int index) {
-        if (index < 0 || index >= hologramLines.size()) {
-            return "";
-        }
-
+    private String resolveHologramTemplate(Grave grave, Location location, String template) {
         String killerName = grave.getKillerName() == null || grave.getKillerName().isBlank()
                 ? plugin.getConfigManager().getMsgHologramUnknownKiller()
                 : grave.getKillerName();
-        Location location = grave.getLocation();
-        String replaced = hologramLines.get(index)
+        return template
                 .replace("{player}", grave.getOwnerName())
                 .replace("{player_level}", String.valueOf(grave.getOwnerLevel()))
                 .replace("{killer}", killerName)
                 .replace("{x}", String.valueOf(location.getBlockX()))
                 .replace("{y}", String.valueOf(location.getBlockY()))
-                .replace("{z}", String.valueOf(location.getBlockZ()))
-                .replace("{time_left}", formatTimeLeft(grave.getDespawnAtMillis()));
-
-        return MessageUtils.getColoredMessage(replaced);
-    }
-
-    private String formatTimeLeft(long despawnAtMillis) {
-        long totalSeconds = Math.max((despawnAtMillis - System.currentTimeMillis()) / 1000L, 0L);
-
-        long hours = totalSeconds / 3600L;
-        long minutes = (totalSeconds % 3600L) / 60L;
-        long seconds = totalSeconds % 60L;
-
-        return hours + "h " + minutes + "m " + seconds + "s";
+                .replace("{z}", String.valueOf(location.getBlockZ()));
     }
 
     private void giveLocatorMap(Player player, Grave grave) {
@@ -972,9 +952,15 @@ public class GraveManager {
     }
 
     private boolean hasVerticalGraveConflict(Location location) {
+        if (gravesByBlock.isEmpty()) {
+            return false;
+        }
+        UUID worldId = location.getWorld().getUID();
+        int x = location.getBlockX();
+        int y = location.getBlockY();
+        int z = location.getBlockZ();
         for (int offsetY = -1; offsetY <= 1; offsetY++) {
-            Location checkLocation = location.clone().add(0, offsetY, 0);
-            if (getGraveByBlock(checkLocation).isPresent()) {
+            if (gravesByBlock.containsKey(new GraveBlockKey(worldId, x, y + offsetY, z))) {
                 return true;
             }
         }
@@ -1051,8 +1037,7 @@ public class GraveManager {
     }
 
     private void indexGraveBlocks(Grave grave) {
-        gravesByBlock.put(toBlockKey(grave.getLocation()), grave.getId());
-
+        gravesByBlock.put(toBlockKey(grave.getLocation()), grave);
     }
 
     private void deindexGraveBlocks(Grave grave) {

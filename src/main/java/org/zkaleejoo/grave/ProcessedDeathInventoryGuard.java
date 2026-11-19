@@ -1,26 +1,29 @@
 package org.zkaleejoo.grave;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
 public final class ProcessedDeathInventoryGuard {
 
-    private final Map<UUID, List<ItemStack>> pendingSnapshots = new HashMap<>();
+    private final Map<UUID, List<ItemStack>> pendingSnapshots = new ConcurrentHashMap<>();
 
     public void markPending(UUID playerId, List<ItemStack> snapshotItems) {
         pendingSnapshots.put(playerId, copyItems(snapshotItems));
     }
 
     public Optional<List<ItemStack>> consume(UUID playerId) {
-        List<ItemStack> snapshotItems = pendingSnapshots.remove(playerId);
-        return snapshotItems == null ? Optional.empty() : Optional.of(copyItems(snapshotItems));
+        return Optional.ofNullable(pendingSnapshots.remove(playerId));
+    }
+
+    public boolean hasPending(UUID playerId) {
+        return pendingSnapshots.containsKey(playerId);
     }
 
     private List<ItemStack> copyItems(List<ItemStack> items) {

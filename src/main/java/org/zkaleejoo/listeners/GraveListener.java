@@ -143,10 +143,13 @@ public class GraveListener implements Listener {
             return;
         }
 
-        List<ItemStack> snapshotItems = copyItems(snapshot.items());
+        List<ItemStack> snapshotItems = snapshot.items();
         List<ItemStack> graveItems = !snapshotItems.isEmpty()
-                ? copyItems(snapshotItems)
-                : copyItems(event.getDrops());
+                ? snapshotItems
+                : event.getDrops().stream()
+                        .filter(item -> item != null && item.getType() != Material.AIR)
+                        .map(ItemStack::clone)
+                        .toList();
         int graveExp = resolveGraveExp(event, snapshot);
 
         String killerName = resolveKillerName(player);
@@ -238,19 +241,6 @@ public class GraveListener implements Listener {
     }
 
     private List<ItemStack> copyItems(ItemStack[] items) {
-        List<ItemStack> copiedItems = new ArrayList<>();
-        for (ItemStack item : items) {
-            if (item == null || item.getType() == Material.AIR) {
-                continue;
-            }
-
-            copiedItems.add(item.clone());
-        }
-
-        return copiedItems;
-    }
-
-    private List<ItemStack> copyItems(List<ItemStack> items) {
         List<ItemStack> copiedItems = new ArrayList<>();
         for (ItemStack item : items) {
             if (item == null || item.getType() == Material.AIR) {
@@ -395,6 +385,9 @@ public class GraveListener implements Listener {
 
     private void schedulePendingInventoryReconciliation(Player player) {
         UUID playerId = player.getUniqueId();
+        if (!processedDeathInventoryGuard.hasPending(playerId)) {
+            return;
+        }
         plugin.getSchedulerAdapter().runForPlayerLater(player, () -> processedDeathInventoryGuard.consume(playerId)
                 .ifPresent(snapshotItems -> reconcileRestoredInventory(player, playerId, snapshotItems)),
                 JOIN_RECONCILIATION_DELAY_TICKS);
@@ -408,10 +401,12 @@ public class GraveListener implements Listener {
 
         ItemStack[] currentItems = player.getInventory().getContents();
         ItemStack[] reconciledItems = DeathInventoryReconciler.removeSnapshotItems(currentItems, snapshotItems);
-        int removedAmount = countItemAmount(currentItems) - countItemAmount(reconciledItems);
+        long removedAmount = countItemAmount(currentItems) - countItemAmount(reconciledItems);
 
-        player.getInventory().setContents(reconciledItems);
-        player.updateInventory();
+        if (removedAmount > 0) {
+            player.getInventory().setContents(reconciledItems);
+            player.updateInventory();
+        }
 
         if (plugin.getConfigManager().isDebugDeathEvents()) {
             plugin.getLogger().info("[DeathDebug] phase=JOIN_RECONCILE"
@@ -422,8 +417,8 @@ public class GraveListener implements Listener {
         }
     }
 
-    private int countItemAmount(ItemStack[] items) {
-        int amount = 0;
+    private long countItemAmount(ItemStack[] items) {
+        long amount = 0;
         for (ItemStack item : items) {
             if (item != null && item.getType() != Material.AIR) {
                 amount += Math.max(item.getAmount(), 0);
@@ -464,7 +459,7 @@ public class GraveListener implements Listener {
 
     private boolean handleChestClaim(PlayerInteractEvent event) {
         Block clicked = event.getClickedBlock();
-        if (clicked == null || !isGraveMarker(clicked)) {
+        if (clicked == null) {
             return false;
         }
 
@@ -505,12 +500,7 @@ public class GraveListener implements Listener {
 
     @EventHandler
     public void onGraveBreak(BlockBreakEvent event) {
-        Block block = event.getBlock();
-        if (!isGraveMarker(block)) {
-            return;
-        }
-
-        Optional<Grave> graveOptional = plugin.getGraveManager().getGraveByMarkerBlock(block);
+        Optional<Grave> graveOptional = plugin.getGraveManager().getGraveByMarkerBlock(event.getBlock());
         if (graveOptional.isEmpty()) {
             return;
         }
@@ -582,6 +572,9 @@ public class GraveListener implements Listener {
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
     public void onInventoryMoveItem(InventoryMoveItemEvent event) {
+        if (!plugin.getGraveManager().hasActiveGraves()) {
+            return;
+        }
         if (isPhysicalGraveContainer(event.getSource()) || isPhysicalGraveContainer(event.getDestination())) {
             event.setCancelled(true);
         }
@@ -773,24 +766,7 @@ public class GraveListener implements Listener {
         }
     }
 
-    private boolean isGraveMarker(Block block) {
-        if (plugin.getGraveManager().getGraveByMarkerBlock(block).isPresent()) {
-            return true;
-        }
-
-        Material marker = plugin.getGraveManager().getGraveMarkerMaterial();
-        if (block.getType() == marker) {
-            return true;
-        }
-
-        return marker == Material.PLAYER_HEAD && block.getType() == Material.PLAYER_WALL_HEAD;
-    }
-
     private boolean isProtectedGraveBlock(Block block) {
-        if (!isGraveMarker(block)) {
-            return false;
-        }
-
         return plugin.getGraveManager().getGraveByMarkerBlock(block).isPresent();
     }
 

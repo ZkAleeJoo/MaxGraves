@@ -1,14 +1,14 @@
 package org.zkaleejoo.grave;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 class GraveTeleportCooldown {
 
     private final long cooldownMillis;
-    private final Map<UUID, Long> cooldownStartMillisByTarget = new HashMap<>();
+    private final Map<UUID, Long> cooldownStartMillisByTarget = new ConcurrentHashMap<>();
 
     GraveTeleportCooldown(long cooldownMillis) {
         this.cooldownMillis = Math.max(0L, cooldownMillis);
@@ -39,6 +39,10 @@ class GraveTeleportCooldown {
         cooldownStartMillisByTarget.clear();
     }
 
+    void remove(UUID targetId) {
+        cooldownStartMillisByTarget.remove(targetId);
+    }
+
     private long remainingMillis(UUID targetId, long nowMillis) {
         if (cooldownMillis <= 0L || targetId == null) {
             return 0L;
@@ -51,7 +55,7 @@ class GraveTeleportCooldown {
 
         long remainingMillis = cooldownMillis - Math.max(nowMillis - cooldownStartMillis, 0L);
         if (remainingMillis <= 0L) {
-            cooldownStartMillisByTarget.remove(targetId);
+            cooldownStartMillisByTarget.remove(targetId, cooldownStartMillis);
             return 0L;
         }
 
